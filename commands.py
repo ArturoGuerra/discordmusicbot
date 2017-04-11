@@ -52,8 +52,10 @@ async def on_voice_disconnect(message, app, args, cmd):
         app.logger.error(e)
 async def on_youtube_play(message, app, args, cmd):
     try:
-        if app.voiceplayer(message.server.id).youtube_cmp(args[0]):
+        app.logger.info(app.voiceplayer(message.server.id).youtube_cmp.match(args[0]))
+        if app.voiceplayer(message.server.id).youtube_cmp.match(args[0]):
             app.voiceplayer(message.server.id).queue.put(args[0])
+            app.voiceplayer(message.server.id).play()
     except Exception as e:
         app.logger.error(e)
 async def on_voice_startqueue(message, app, args, cmd):
@@ -80,12 +82,25 @@ async def on_voice_skip(message, app, args, cmd):
     except Exception as e:
         app.loggger.error(e)
 async def on_voice_playing(message, app, args, cmd):
-    pass
+    try:
+        player = app.voiceplayer(message.server.id).player
+    except:
+        return
+    try:
+        playerlist=list()
+        playerlist.append(("Title", player.title))
+        playerlist.append(("Duration", player.duration))
+        em = app.make_embed(playerlist)
+        await app.send_reply(message.channel, em)
+    except Exception as e:
+        app.logger.error(e)
+async def on_voice_set_default_channel(message, app, args, cmd):
+    app.logger.info("DO THIS")
+#TODO
 async def on_select_playlist(message, app, args, cmd):
     try:
         voiceplayer = app.voiceplayer(message.server.id)
-        playlist = args[0]
-        select_playlist = playlist.loadPlaylist(app, voiceplayer, playlist)
+        select_playlist = playlist.loadPlaylist(app, voiceplayer, args[0])
         select_playlist.load_playlist()
     except (IndexError, ValueError):
         app.logger.error("Playlist not found")

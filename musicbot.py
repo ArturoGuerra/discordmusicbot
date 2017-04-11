@@ -12,20 +12,23 @@ import logging
 import playlist
 import commands
 import musicplayer
+import threading
 import datetime as dt
 
 class MusicApplication():
+    color_blue = 0x1EA1F1
+    color_red = 0xCD160B
     def __init__(self):
         self.client = discord.Client()
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger('discord')
         self.loadPlaylist = playlist.loadPlaylist
         self.musicPlaylists = playlist.Playlists(self)
         self.musicClient = musicplayer.musicClient(self)
         self.musicPlayer = musicplayer.musicPlayer
-        logging.getLogger('discord')
         self.app_lock = threading.Lock()
-        self.logger = logging.basicConfig(level=logging.INFO)
         self.config = config.Config(self)
-        self.channels = config.Channels(self)
+        self.channels = config.Channels(self).channels
     def voice_client(self, server):
         return self.client.voice_client_server(server)
     def voiceplayer(self, server):
@@ -65,9 +68,10 @@ def main():
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")
-    for server in self.channels():
+    app.musicPlaylists.scan_playlists()
+    for server in app.channels:
         server = discord.utils.get(app.client.servers, id=server)
-        channel = discord.utils.get(server.channels, id=self.channels()[server])
+        channel = discord.utils.get(server.channels, id=app.channels[server.id])
         try:
             await app.musicClient.voice_connect(channel)
         except Exception as e:
@@ -115,5 +119,5 @@ async def on_server_leave(server):
     pass
 
 if __name__ == "__main__":
-    app.logger.info("Running as a scrpit...")
+    app.logger.info("Started as script...")
     main()

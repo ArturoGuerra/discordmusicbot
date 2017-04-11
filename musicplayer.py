@@ -6,31 +6,7 @@ import asyncio
 import threading
 from queue import Queue
 
-
-class MusicClient():
-    def __init__(self, app):
-        self.app = app
-        self.voice_clients = dict()
-    async def voice_connect(self, channel, volume=100):
-        try:
-            if not self.voice_client(channel.server):
-                Player = MusicPlayer(volume, channel.server.id, self.app)
-                voiceClient = await self.app.client.join_voice_channel(channel)
-                self.voice_clients[channel.server.id] = Player
-                return voiceClient
-        except (AttributeError, IndexError, ValueError):
-            self.app.logger.error(f"Error connected to voice channel: {channel.name}")
-    async def voice_disconnect(self, server):
-        try:
-            await self.voice_client(server).disconnect()
-            del self.voice_clients[server.id]
-        except (AttributeError, IndexError):
-            self.app.logger.error("Error while disconnecting from voice channel")
-    def voice_client(self, server):
-        return self.app.client.voice_client_in(server)
-
-
-class MusicPlayer():
+class musicPlayer():
     def __init__(self, volume,  server, app):
         self.app = app
         self.thread = None
@@ -43,28 +19,31 @@ class MusicPlayer():
         self.youtube_cmp =  regex.compile(r"^(?:http(s)?:\/\/)?(www\.)?(youtube\.com)(/watch\?)[A-z\=\&]+.*")
     async def music_player(self, server):
         self.lock.acquire()
-        self.app.logger.info("Locked Acquired")
+        self.app.logger.info("Acquired Lock")
         while True:
             await asyncio.sleep(2)
-            if self.app.voiceClient(server):
+            if self.app.voice_client(server):
                 try:
-                    if (self.player) and not self.player.is_done():
+                    if self.player and not self.player.is_done():
                         pass
                     else:
                         if self.queue.qsize() > 0:
                             try:
-                                self.app.logger.info("Stating voice player...")
+                                self.app.logger.info(f"Starting voice player....")
                                 item = self.queue.get()
-                                self.app.logger.info("Got item from queue...")
+                                self.app.logger.info(f"Got player object...")
+                                self.app.logger.info(item)
                                 player = await self.encode_audio(item, server)
                                 self.player = player
+                                self.player.volume = self.default_volume
                                 self.player.start()
                                 while self.player.is_playing():
-                                    await asyncio.sleep(0.2)
+                                    await asyncio.sleep(1)
                                 if self.tts_cmp.match(item):
                                     os.remove(item)
                                     self.app.logger.info("MP3 file removed")
                                 self.app.logger.info("Stopping voice player...")
+                                self.queue.task_done()
                             except (AttributeError, KeyError, IndexError):
                                 self.app.logger.error("Player not found")
                                 break
@@ -75,10 +54,10 @@ class MusicPlayer():
                             self.app.logger.info("Queue is empty")
                             break
                 except AttributeError:
-                    self.app.logger.error(f"Player not found")
+                    self.app.logger.error("Voice Player not found")
                     break
                 except Exception as e:
-                    self.app.logger.error(e)
+                    self.app.logger.error(f"Voice Player error: {e}")
                     break
             else:
                 self.app.logger.info("VoiceClient not found")
@@ -105,7 +84,7 @@ class MusicPlayer():
         if self.lock.locked() == False:
             server = discord.utils.get(self.app.client.servers, id=self.server_id)
             if server:
-                self.thread = self.app.client.create_task(music_player(server))
+                self.thread = self.app.client.loop.create_task(self.music_player(server))
     def start(self):
         if (self.lock.locked() == True) and self.player:
             self.player.start()
@@ -119,3 +98,24 @@ class MusicPlayer():
         if (self.lock.locked() == True) and self.player:
             self.player.resume()
 
+class musicClient():
+    def __init__(self, app):
+        self.app = app
+        self.voice_clients = dict()
+    async def voice_connect(self, channel, volume=100):
+        try:
+            if not self.voice_client(channel.server):
+                Player = musicPlayer(volume, channel.server.id, self.app)
+                voiceClient = await self.app.client.join_voice_channel(channel)
+                self.voice_clients[channel.server.id] = Player
+                return voiceClient
+        except (AttributeError, IndexError, ValueError):
+            self.app.logger.error(f"Error connected to voice channel: {channel.name}")
+    async def voice_disconnect(self, server):
+        try:
+            await self.voice_client(server).disconnect()
+            del self.voice_clients[server.id]
+        except (AttributeError, IndexError):
+            self.app.logger.error("Error while disconnecting from voice channel")
+    def voice_client(self, server):
+        return self.app.client.voice_client_in(server)
