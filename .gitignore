@@ -1,0 +1,4 @@
+config.json
+channels.json
+__pycache__/
+*.pyc
