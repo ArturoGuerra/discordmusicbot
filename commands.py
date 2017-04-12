@@ -29,7 +29,7 @@ async def on_list_playlists(message, app, args, cmd):
     x = 0
     playlist_list=list()
     try:
-        for playlist in app.musicPlaylists:
+        for playlist in app.musicPlaylists.playlists:
             x += 1
             playlist_list.append((f"Playlist {x}", playlist))
         em = app.make_embed(playlist_list)
@@ -67,11 +67,17 @@ async def on_voice_disconnect(message, app, args, cmd):
         app.logger.error(e)
 async def on_youtube_play(message, app, args, cmd):
     try:
-        app.logger.info(app.voiceplayer(message.server.id).youtube_cmp.match(args[0]))
-        if app.voiceplayer(message.server.id).youtube_cmp.match(args[0]):
-            app.voiceplayer(message.server.id).queue.put(args[0])
+        await app.musicClient.voice_connect(message.author.voice.voice_channel)
+    except Exception as e:
+        app.logger.error(e)
+    try:
+        if not app.voiceplayer(message.server.id).no_yt_cmp.match(args[0]):
+            if app.voiceplayer(message.server.id).yt_url_cmp.match(args[0]):
+                app.voiceplayer(message.server.id).queue.put(args[0])
+            else:
+                app.voiceplayer(message.server.id).queue.put(f"ytsearch:{' '.join(args[0:])}")
             app.voiceplayer(message.server.id).play()
-        await app.client.send_message(message.channel, "Your song has been added to the queue")
+            await app.client.send_message(message.channel, "Your song has been added to the queue")
     except Exception as e:
         app.logger.error(e)
 async def on_voice_startqueue(message, app, args, cmd):
@@ -96,7 +102,7 @@ async def on_voice_stop(message, app, args, cmd):
     try:
         for i in list(player.queue.queue):
             player.queue.get()
-        player.player.stop()
+        player.stop()
     except Exception as e:
         app.logger.error(e)
         return
@@ -157,9 +163,6 @@ async def on_voice_pause(message, app, args, cmd):
         app.logger.error(e)
         return
     await app.client.send_message(message.channel, "Voice player paused")
-async def on_voice_set_default_channel(message, app, args, cmd):
-    app.logger.info("DO THIS")
-#TODO
 async def on_select_playlist(message, app, args, cmd):
     playlist_list=list()
     try:

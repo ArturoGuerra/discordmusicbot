@@ -18,7 +18,9 @@ class musicPlayer():
         self.lock = threading.Lock()
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
-        self.youtube_cmp =  regex.compile(r"^(?:http(s)?:\/\/)?(www\.)?(youtube\.com)(/watch\?)[A-z\=\&]+.*")
+        self.yt_seach_cmp = regex.compile(r"^(ytsearch\:)([A-z0-9]+.*)")
+        self.yt_url_cmp =  regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=(?![A-z0-9]+&list=))([A-z0-9\=\&]+.*)")
+        self.no_yt_cmp = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)((\/watch\?v=[A-z0-9]+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
     async def music_player(self, server):
         self.lock.acquire()
         self.app.logger.info("Acquired Lock")
@@ -39,7 +41,7 @@ class musicPlayer():
                                 player = await self.encode_audio(item, server)
                                 self.player = player
                                 self.player.volume = self.default_volume
-                                self.player.start()
+                                self.start()
                                 while not self.player.is_done():
                                     await asyncio.sleep(1)
                                 if self.tts_cmp.match(item):
@@ -75,15 +77,18 @@ class musicPlayer():
             if self.tts_cmp.match(item):
                 self.app.logger.info("MP3 file detected")
                 player = self.app.musicClient.voice_client(server).create_ffmpeg_player(item)
-            elif self.youtube_cmp.match(item):
+            elif self.yt_url_cmp.match(item):
                 self.app.logger.info("Youtube url detected")
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
+            elif self.yt_search_cmp.match(item):
+                self.app.logger.info("Youtube search detected")
                 player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
             else:
                 self.app.logger.info("None of the above detected")
-                player = None
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
             return player
         except Exception as e:
-            self.app.logger.error("Encoder error: {e}")
+            self.app.logger.error(f"Encoder error: {e}")
     def playerdecorator(func):
         def player_wrapper(self):
             if self.lock.locked() == False:
