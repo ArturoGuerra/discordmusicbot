@@ -29,10 +29,10 @@ class loadPlaylist():
         self.voiceplayer = voiceplayer
     def load_playlist(self):
         try:
-            self.app.logger.info(self.playlists)
             playlist = self.playlists[self.playlist]
         except (IndexError, ValueError):
             self.app.logger.error("Playlist not found")
+            raise ValueError("Playlist not found")
         for song in playlist:
             self.app.logger.info(f"Loaded:{song}")
             self.voiceplayer.queue.put(song.rstrip())

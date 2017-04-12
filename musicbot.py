@@ -59,7 +59,11 @@ class MusicApplication():
             else:
                 embed.set_footer(text=footer)
         return embed
-
+    async def send_reply(self, channel, em):
+        try:
+            await self.client.send_message(channel, embed=em)
+        except Exception as e:
+            self.logger.error(f"Error sending Message: {e}")
 
 app = MusicApplication()
 def main():
