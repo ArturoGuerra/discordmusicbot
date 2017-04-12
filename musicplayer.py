@@ -14,6 +14,7 @@ class musicPlayer():
         self.queue = Queue()
         self.server_id = server
         self.skipcount = 0
+        self.skippers = list()
         self.lock = threading.Lock()
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
@@ -82,24 +83,46 @@ class musicPlayer():
                 player = None
             return player
         except Exception as e:
-            self.app.logger.error(e)
+            self.app.logger.error("Encoder error: {e}")
+    def playerdecorator(func):
+        def player_wrapper(self):
+            if self.lock.locked() == False:
+                server = discord.utils.get(self.app.client.servers, id=self.server_id)
+                if server:
+                    self.thread = self.app.client.loop.create_task(self.music_player(server))
+            return func(self)
+        return player_wrapper
+    @playerdecorator
     def play(self):
-        if self.lock.locked() == False:
-            server = discord.utils.get(self.app.client.servers, id=self.server_id)
-            if server:
-                self.thread = self.app.client.loop.create_task(self.music_player(server))
+        self.app.logger.info("Trying to start player...")
+    @playerdecorator
     def start(self):
         if (self.lock.locked() == True) and self.player:
-            self.player.start()
+            try:
+                self.player.start()
+            except Exception as e:
+                self.app.logger.error("Player start command error: {e}")
+    @playerdecorator
     def stop(self):
         if (self.lock.locked() == True) and self.player:
-            self.player.stop()
+            try:
+                self.player.stop()
+            except Exception as e:
+                self.app.logger.error(f"Player stop command error: {e}")
+    @playerdecorator
     def pause(self):
         if (self.lock.locked() == True) and self.player:
-            self.player.pause()
+            try:
+                self.player.pause()
+            except Exception as e:
+                self.app.logger.error(f"Player pause command error: {e}")
+    @playerdecorator
     def resume(self):
         if (self.lock.locked() == True) and self.player:
-            self.player.resume()
+            try:
+                self.player.resume()
+            except Exception as e:
+                self.app.logger.error(f"Player resume command error: {e}")
 
 class musicClient():
     def __init__(self, app):

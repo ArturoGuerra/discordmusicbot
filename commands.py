@@ -82,7 +82,7 @@ async def on_voice_startqueue(message, app, args, cmd):
 async def on_voice_clearqueue(message, app, args, cmd):
     try:
         x = app.voiceplayer(message.server.id).queue.qsize()
-        for i in app.voiceplayer(message.server.id).queue.queue:
+        for i in list(app.voiceplayer(message.server.id).queue.queue):
             app.voiceplayer(message.server.id).queue.get()
         em = app.make_embed(None, title="Voice Queue", desc=f"{x} items have been removed from the queue")
         await app.send_reply(message.channel, em)
@@ -94,9 +94,9 @@ async def on_voice_stop(message, app, args, cmd):
     except:
         return
     try:
-        for i in player.queue.queue:
+        for i in list(player.queue.queue):
             player.queue.get()
-        await player.player.stop()
+        player.player.stop()
     except Exception as e:
         app.logger.error(e)
         return
@@ -104,22 +104,30 @@ async def on_voice_stop(message, app, args, cmd):
 async def on_voice_skip(message, app, args, cmd):
     queuelist=list()
     try:
-        if app.voiceplayer(message.server.id).skipcount == 5:
+        if app.voiceplayer(message.server.id).skipcount == 4:
+            app.voiceplayer(message.server.id).skippers = list()
             app.voiceplayer(message.server.id).stop()
+            app.logger.info("Skipping...")
             queuelist.append(("VoiceQueue", "Skipped song"))
-        else:
+        elif not message.author.id in app.voiceplayer(message.server.id).skippers:
+            app.logger.info("Skip count is not 5")
+            app.voiceplayer(message.server.id).skippers.append(message.author.id)
             app.voiceplayer(message.server.id).skipcount += 1
-            queuelist.append(("VoiceQueue", f"{int(5 - app.voiceplayer(message.server.id).player.volume)} skips left"))
+            queuelist.append(("VoiceQueue", f"{int(5 - app.voiceplayer(message.server.id).skipcount)} skips left"))
     except Exception as e:
         app.logger.error(e)
         return
-    em = app.make_embed(queuelist)
-    await app.send_reply(message.channel, em)
+    if len(queuelist) > 0:
+        em = app.make_embed(queuelist)
+        await app.send_reply(message.channel, em)
 async def on_voice_force_skip(message, app, args, cmd):
     try:
-        await app.voiceplayer(message.server.id).stop()
+        app.logger.info("Forced skipped song")
+        app.voiceplayer(message.server.id).stop()
+        em = app.make_embed(None, title="Force Skip", desc="User with perm level 5 or above force skipped song")
+        await app.send_reply(message.channel, em)
     except Exception as e:
-        app.loggger.error(e)
+        app.logger.error(e)
         return
     await app.send_reply(message.channel, "Force skipped track")
 async def on_voice_playing(message, app, args, cmd):
@@ -162,8 +170,9 @@ async def on_select_playlist(message, app, args, cmd):
     except (IndexError, ValueError):
         app.logger.error("Playlist not found")
         playlist_list.append(("Playlist Selection error", "Playlist not found"))
-    em = app.make_embed(playlist_list)
-    await app.send_reply(message.channel, em)
+    if len(playlist_list) > 0:
+        em = app.make_embed(playlist_list)
+        await app.send_reply(message.channel, em)
 
 
 

@@ -18,9 +18,13 @@ class Playlists():
                     if self.youtube.match(line):
                         self.playlists[name].append(line)
                 self.app.logger.info(f"Loaded playlist: {playlist}")
-    def delete_playlist(self, name):
-        pass
-        #TODO
+    def reload_playlists(self):
+        for i in self.playlists:
+            del self.playlists[i]
+        self.scan_playlists()
+    def clear_playlists(self):
+        for i in self.playlists:
+            del self.playlists[i]
 class loadPlaylist():
     def __init__(self, app, voiceplayer, playlist):
         self.app = app

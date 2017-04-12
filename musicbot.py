@@ -31,6 +31,13 @@ class MusicApplication():
         self.channels = config.Channels(self).channels
     def voice_client(self, server):
         return self.client.voice_client_server(server)
+    def get_permlvl(self, message):
+        if message.author.server_permissions.administrator:
+            return 10
+        elif message.author.server_permissions.mute_members and message.author.server_permissions.deafen_members:
+            return 6
+        else:
+            return 0
     def voiceplayer(self, server):
         try:
             return self.musicClient.voice_clients[server]
@@ -72,6 +79,7 @@ def main():
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")
+    app.musicPlaylists.clear_playlists()
     app.musicPlaylists.scan_playlists()
     for server in app.channels:
         server_obj = discord.utils.get(app.client.servers, id=server)
@@ -79,42 +87,48 @@ async def on_ready():
         try:
             await app.musicClient.voice_connect(channel)
         except Exception as e:
-            app.logger.error(e)
+            app.logger.error(f"Connecting error: {e}")
 @app.client.event
 async def on_message(message):
     recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix()))
     if recmp.match(message.content):
-        splitmsg = message.content.split(' ')
-        cmd = splitmsg[0].strip(app.config.prefix())
-        args = splitmsg[1:]
-        if cmd == "selectplaylist":
-            await commands.on_select_playlist(message, app, args, cmd)
-        elif cmd == "play":
-            await commands.on_youtube_play(message, app, args, cmd)
-        elif cmd == "volume":
-            await commands.on_volume(message, app, args, cmd)
-        elif cmd == "join":
-            await commands.on_voice_connect(message, app, args, cmd)
-        elif cmd == "leave":
-            await commands.on_voice_disconnect(message, app, args, cmd)
-        elif cmd == "pause":
-            await commands.on_voice_pause(message, app, args, cmd)
-        elif cmd == "resume":
-            await commands.on_voice_resume(message, app, args, cmd)
-        elif cmd == "skip":
-            await commands.on_voice_skip(message, app, args, cmd)
-        elif cmd == "playing":
-            await commands.on_voice_playing(message, app, args, cmd)
-        elif cmd == "setdefaultchannel":
-            await commands.on_voice_set_default_channel(message, app, args, cmd)
-        elif cmd == "listplaylists":
-            await commands.on_list_playlists(message, app, args, cmd)
-        elif cmd == "startqueue":
-            await commands.on_voice_startqueue(message, app, args, cmd)
-        elif cmd == "clearqueue":
-            await commands.on_voice_clearqueue(message. app, args, cmd)
-        elif cmd == "stop":
-            await commands.on_voice_stop(message, app, args, cmd)
+        try:
+            splitmsg = message.content.split(' ')
+            cmd = splitmsg[0].strip(app.config.prefix())
+            args = splitmsg[1:]
+            permlvl = app.get_permlvl(message)
+            if permlvl >= 5:
+                if cmd == "clearqueue":
+                    await commands.on_voice_clearqueue(message. app, args, cmd)
+                elif cmd == "stop":
+                    await commands.on_voice_stop(message, app, args, cmd)
+                elif cmd == "volume":
+                    await commands.on_volume(message, app, args, cmd)
+                elif cmd == "join":
+                    await commands.on_voice_connect(message, app, args, cmd)
+                elif cmd == "leave":
+                    await commands.on_voice_disconnect(message, app, args, cmd)
+                elif cmd == "pause":
+                    await commands.on_voice_pause(message, app, args, cmd)
+                elif cmd == "resume":
+                    await commands.on_voice_resume(message, app, args, cmd)
+                elif cmd == "forceskip":
+                    await commands.on_voice_force_skip(message, app, args, cmd)
+            if permlvl >= 0:
+                if cmd == "selectplaylist":
+                    await commands.on_select_playlist(message, app, args, cmd)
+                elif cmd == "play":
+                    await commands.on_youtube_play(message, app, args, cmd)
+                elif cmd == "skip":
+                    await commands.on_voice_skip(message, app, args, cmd)
+                elif cmd == "playing":
+                    await commands.on_voice_playing(message, app, args, cmd)
+                elif cmd == "listplaylists":
+                    await commands.on_list_playlists(message, app, args, cmd)
+                elif cmd == "startqueue":
+                    await commands.on_voice_startqueue(message, app, args, cmd)
+        except Exception as e:
+            app.logger.error(f"Exception in message: {e}")
 @app.client.event
 async def on_server_join(server):
     pass
