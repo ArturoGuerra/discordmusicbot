@@ -24,8 +24,8 @@ class MusicApplication():
         self.logger = logging.getLogger('discord')
         self.loadPlaylist = playlist.loadPlaylist
         self.musicPlaylists = playlist.Playlists(self)
-        self.musicClient = musicplayer.musicClient(self)
         self.musicPlayer = musicplayer.musicPlayer
+        self.musicClient = musicplayer.musicClient(self)
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
         self.channels = config.Channels(self).channels
@@ -70,13 +70,12 @@ async def on_ready():
     app.logger.info("MadarWusic is online")
     app.musicPlaylists.scan_playlists()
     for server in app.channels:
-        server = discord.utils.get(app.client.servers, id=server)
-        channel = discord.utils.get(server.channels, id=app.channels[server.id])
+        server_obj = discord.utils.get(app.client.servers, id=server)
+        channel = discord.utils.get(server_obj.channels, id=app.channels[server])
         try:
             await app.musicClient.voice_connect(channel)
         except Exception as e:
             app.logger.error(e)
-
 @app.client.event
 async def on_message(message):
     recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix()))
@@ -110,6 +109,8 @@ async def on_message(message):
             await commands.on_voice_startqueue(message, app, args, cmd)
         elif cmd == "clearqueue":
             await commands.on_voice_clearqueue(message. app, args, cmd)
+        elif cmd == "stop":
+            await commands.on_voice_stop(message, app, args, cmd)
 @app.client.event
 async def on_server_join(server):
     pass

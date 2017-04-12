@@ -13,6 +13,7 @@ class musicPlayer():
         self.player = None
         self.queue = Queue()
         self.server_id = server
+        self.skipcount = 0
         self.lock = threading.Lock()
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
@@ -20,9 +21,10 @@ class musicPlayer():
     async def music_player(self, server):
         self.lock.acquire()
         self.app.logger.info("Acquired Lock")
+        self.app.logger.info(server)
         while True:
             await asyncio.sleep(2)
-            if self.app.voice_client(server):
+            if self.app.musicClient.voice_client(server):
                 try:
                     if self.player and not self.player.is_done():
                         pass
@@ -37,11 +39,12 @@ class musicPlayer():
                                 self.player = player
                                 self.player.volume = self.default_volume
                                 self.player.start()
-                                while self.player.is_playing():
+                                while not self.player.is_done():
                                     await asyncio.sleep(1)
                                 if self.tts_cmp.match(item):
                                     os.remove(item)
                                     self.app.logger.info("MP3 file removed")
+                                self.skipcount = 0
                                 self.app.logger.info("Stopping voice player...")
                                 self.queue.task_done()
                             except (AttributeError, KeyError, IndexError):
@@ -70,10 +73,10 @@ class musicPlayer():
         try:
             if self.tts_cmp.match(item):
                 self.app.logger.info("MP3 file detected")
-                player = self.app.voiceClient(server).create_ffmpeg_player(item)
+                player = self.app.musicClient.voice_client(server).create_ffmpeg_player(item)
             elif self.youtube_cmp.match(item):
                 self.app.logger.info("Youtube url detected")
-                player = await self.app.voiceClient(server).create_ytdl_player(item)
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
             else:
                 self.app.logger.info("None of the above detected")
                 player = None

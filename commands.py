@@ -47,7 +47,7 @@ async def on_voice_connect(message, app, args, cmd):
         app.logger.error(e)
 async def on_voice_disconnect(message, app, args, cmd):
     try:
-        await app.musicClient.voice_diconnect(message.server)
+        await app.musicClient.voice_disconnect(message.server)
     except Exception as e:
         app.logger.error(e)
 async def on_youtube_play(message, app, args, cmd):
@@ -63,20 +63,32 @@ async def on_voice_startqueue(message, app, args, cmd):
         app.voiceplayer(message.server.id).play()
     except Exception as e:
         app.logger.error(e)
-async def on_voice_stop(message, app, args, cmd):
-    try:
-        for i in app.voiceplayer(message.server.id).queue.queue:
-            app.voiceplayer(message.server.id).queue.get()
-        await app.voiceplayer(message.server.id).stop()
-    except Exception as e:
-        app.loggger.info(e)
 async def on_voice_clearqueue(message, app, args, cmd):
     try:
         for i in app.voiceplayer(message.server.id).queue.queue:
             app.voiceplayer(message.server.id).queue.get()
     except Exception as e:
         app.logger.error(e)
+async def on_voice_stop(message, app, args, cmd):
+    try:
+        player = app.voiceplayer(message.server.id)
+    except:
+        return
+    try:
+        for i in player.queue.queue:
+            player.queue.get()
+        await player.player.stop()
+    except Exception as e:
+        app.logger.error(e)
 async def on_voice_skip(message, app, args, cmd):
+    try:
+        if app.voiceplayer(message.server.id).skipcount == 5:
+            app.voiceplayer(message.server.id).stop()
+        else:
+            app.voiceplayer(message.server.id).skipcount += 1
+    except Exception as e:
+        app.logger.error(e)
+async def on_voice_force_skip(message, app, args, cmd):
     try:
         await app.voiceplayer(message.server.id).stop()
     except Exception as e:
@@ -94,6 +106,10 @@ async def on_voice_playing(message, app, args, cmd):
         await app.send_reply(message.channel, em)
     except Exception as e:
         app.logger.error(e)
+async def on_voice_resume(message, app, args, cmd):
+    app.voiceplayer(message.server.id).player.resume()
+async def on_voice_pause(message, app, args, cmd):
+    app.voiceplayer(message.server.id).player.pause()
 async def on_voice_set_default_channel(message, app, args, cmd):
     app.logger.info("DO THIS")
 #TODO
