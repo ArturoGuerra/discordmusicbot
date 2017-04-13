@@ -145,7 +145,7 @@ async def on_voice_playing(message, app, args, cmd):
         playerlist=list()
         playerlist.append(("Title", player.title))
         playerlist.append(("Duration", player.duration))
-        em = app.make_embed(playerlist)
+        em = app.make_embed(playerlist, inline=False)
         await app.send_reply(message.channel, em)
     except Exception as e:
         app.logger.error(e)
