@@ -41,13 +41,14 @@ class musicPlayer():
                                 player = await self.encode_audio(item, server)
                                 self.player = player
                                 self.player.volume = self.default_volume
-                                self.start()
+                                self.player.start()
                                 while not self.player.is_done():
                                     await asyncio.sleep(1)
                                 if self.tts_cmp.match(item):
                                     os.remove(item)
                                     self.app.logger.info("MP3 file removed")
                                 self.skipcount = 0
+                                self.skippers = list()
                                 self.app.logger.info("Stopping voice player...")
                                 self.queue.task_done()
                             except (AttributeError, KeyError, IndexError):
