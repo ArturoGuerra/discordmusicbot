@@ -5,7 +5,7 @@ class Playlists():
     def __init__(self, app):
         self.app = app
         self.playlists = dict()
-        self.youtube = regex.compile(r"^(?:http(s)?:\/\/)?(www\.)?(youtube\.com)(/watch\?)[A-z\=\&]+.*")
+        self.youtube = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=(?![A-z0-9]+&list=))([A-z0-9\=\&]+.*)")
         self.playlist_cmp = regex.compile("^([A-z0-9])+\.txt")
         self.playlistdir = "playlists"
     def scan_playlists(self):
@@ -18,13 +18,11 @@ class Playlists():
                     if self.youtube.match(line):
                         self.playlists[name].append(line)
                 self.app.logger.info(f"Loaded playlist: {playlist}")
-    def reload_playlists(self):
-        for i in self.playlists:
-            del self.playlists[i]
-        self.scan_playlists()
     def clear_playlists(self):
-        for i in self.playlists:
-            del self.playlists[i]
+        self.playlists = dict()
+    def reload_playlists(self):
+        self.clear_playlists()
+        self.scan_playlists()
 class loadPlaylist():
     def __init__(self, app, voiceplayer, playlist):
         self.app = app
@@ -41,4 +39,3 @@ class loadPlaylist():
             self.app.logger.info(f"Loaded:{song}")
             self.voiceplayer.queue.put(song.rstrip())
         self.voiceplayer.play()
-
