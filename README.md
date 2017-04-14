@@ -3,7 +3,7 @@
 # Discord Music Bot
 A python3.6 based music bot
 
-#Features
+# Features
  - This bot has built-in queue and playlist support
  - It has a permissions system that unlocks admin commands based on discord permissions
  - You can add default channels to connect to on restart
