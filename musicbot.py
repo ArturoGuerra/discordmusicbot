@@ -11,8 +11,9 @@ import discord
 import logging
 import playlist
 import commands
-import musicplayer
+import argparse
 import threading
+import musicplayer
 import datetime as dt
 
 class MusicApplication():
@@ -26,6 +27,10 @@ class MusicApplication():
         self.musicPlaylists = playlist.Playlists(self)
         self.musicPlayer = musicplayer.musicPlayer
         self.musicClient = musicplayer.musicClient(self)
+        self.parser = argparse.ArgumentParser()
+        self.parser.add_argument("--dry-run", help="Runs the bot without connecting to discord", action="store_true")
+        self.parser.add_argument("--setup", help="Runs bot setup and creates config file", action="store_true")
+        self.args = self.parser.parse_args()
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
         self.channels = config.Channels(self).channels
@@ -74,8 +79,26 @@ class MusicApplication():
 
 app = MusicApplication()
 def main():
-    app.client.run(app.config.token())
-
+    if app.args.setup:
+        config = dict()
+        token = getpass.getpass("Token: ")
+        prefix = input("Prefix: ")
+        config['token'] = token
+        config['prefix'] = prefix
+        config['owners'] = list()
+        channels = dict()
+        server_id = input("Server ID: ")
+        channel_id = input("Channel ID: ")
+        channels[server_id] = channel_id
+        with open('./config/config.json', 'w') as f:
+            json.dump(config, f)
+        with open('./config/channels.json', 'w') as f:
+            json.dump(channels, f)
+    if not app.args.dry_run:
+        app.logger.info("Logging into discord")
+        app.client.run(app.config.token())
+    else:
+        app.logger.info("Bot Dry Run passed")
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")

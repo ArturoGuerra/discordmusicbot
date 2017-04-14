@@ -10,7 +10,8 @@ class configLoader():
                     self.data = json.load(f)
                     self.app.logger.info("Loaded file...")
             except FileNotFoundError as e:
-                raise FileNotFoundError("File was not found")
+                if not self.app.args.dry_run:
+                   raise FileNotFoundError("File was not found")
             else:
                 return func(self, *args)
         return wrapper
@@ -42,7 +43,8 @@ class Config():
             with open("./config/config.json", 'r') as f:
                 self.config = json.load(f)
         except FileNotFoundError:
-            self.app.logger.error("Config file not found")
+            if not self.app.args.dry_run:
+                self.app.logger.error("Config file not found")
     def token(self):
         return self.config['token']
     def prefix(self):
@@ -56,7 +58,8 @@ class Channels():
             with open("./config/channels.json", 'r') as f:
                 self.channels = json.load(f)
         except IOError:
-            self.app.logger.error("Channel file not found")
+            if not self.app.args.dry_run:
+                self.app.logger.error("Channel file not found")
     def channels(self):
         return self.channels
 
