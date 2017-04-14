@@ -39,6 +39,8 @@ class musicPlayer():
                                 self.app.logger.info(f"Got player object...")
                                 self.app.logger.info(item)
                                 player = await self.encode_audio(item, server)
+                                self.skipcount = 0
+                                self.skippers = list()
                                 self.player = player
                                 self.player.volume = self.default_volume
                                 self.player.start()
@@ -47,8 +49,6 @@ class musicPlayer():
                                 if self.tts_cmp.match(item):
                                     os.remove(item)
                                     self.app.logger.info("MP3 file removed")
-                                self.skipcount = 0
-                                self.skippers = list()
                                 self.app.logger.info("Stopping voice player...")
                                 self.queue.task_done()
                             except (AttributeError, KeyError, IndexError):
