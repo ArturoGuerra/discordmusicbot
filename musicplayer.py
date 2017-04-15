@@ -102,7 +102,9 @@ class musicPlayer():
             for url in urls:
                 url = str(url)
                 url = url[:url.index('&')]
-                urlist.append(f"https://www.youtube.com/{url}")
+                url = f"https://www.youtube.com/{url}"
+                if not url in urlist:
+                    urlist.append(url)
         return urlist
     def playerdecorator(func):
         def player_wrapper(self):
