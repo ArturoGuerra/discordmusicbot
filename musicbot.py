@@ -19,9 +19,10 @@ import datetime as dt
 class MusicApplication():
     color_blue = 0x1EA1F1
     color_red = 0xCD160B
+    FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
     def __init__(self):
         self.client = discord.Client()
-        logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger('discord')
         self.loadPlaylist = playlist.loadPlaylist
         self.musicPlaylists = playlist.Playlists(self)
