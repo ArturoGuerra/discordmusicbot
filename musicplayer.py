@@ -22,7 +22,7 @@ class musicPlayer():
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
         self.yt_search_cmp = regex.compile(r"^(ytsearch:)([A-z0-9]+.*)")
         self.yt_url_cmp =  regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=(?![A-z0-9]+&list=))([A-z0-9\=\&]+.*)")
-        self.yt_playlist_cmp = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)((\/watch\?v=[A-z0-9]+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
+        self.yt_playlist_cmp = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=[A-z0-9]+&list=)?(\/playlist\?list=)?([A-z0-9\=\&]+.*)")
     async def music_player(self, server):
         self.lock.acquire()
         self.app.logger.info("Acquired Lock")
@@ -93,9 +93,11 @@ class musicPlayer():
             self.app.logger.error(e)
             return e
     def playlistparser(self, url):
+        match = self.yt_playlist_cmp.match(url)
+        if match.group(2):
+            url = f"https://www.youtube.com/playlist?list={str(match.group(4))}"
         r = requests.get(url)
-        urlend = url[url.rfind('=') + 1:]
-        recmp = regex.compile(r"watch\?v=\S+?list=" + urlend)
+        recmp = regex.compile(r"watch\?v=\S+?list={}".format(str(match.group(4))))
         urls = recmp.findall(r.text)
         urlist = list()
         if urls:
