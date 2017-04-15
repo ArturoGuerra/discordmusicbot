@@ -71,13 +71,21 @@ async def on_youtube_play(message, app, args, cmd):
     except Exception as e:
         app.logger.error(e)
     try:
-        if not app.voiceplayer(message.server.id).no_yt_cmp.match(args[0]):
-            if app.voiceplayer(message.server.id).yt_url_cmp.match(args[0]):
-                app.voiceplayer(message.server.id).queue.put(args[0])
-            else:
-                app.voiceplayer(message.server.id).queue.put(f"ytsearch:{' '.join(args[0:])}")
-            app.voiceplayer(message.server.id).play()
-            await app.client.send_message(message.channel, "Your song has been added to the queue")
+        if app.voiceplayer(message.server.id).yt_playlist_cmp.match(args[0]):
+            urls = app.voiceplayer(message.server.id).playlistparser(args[0])
+            app.logger.info("Playlist detected")
+            for url in urls:
+                if app.voiceplayer(message.server.id).yt_url_cmp.match(url):
+                    app.logger.info(f"Adding url to queue: {url}")
+                    app.voiceplayer(message.server.id).queue.put(url)
+        elif app.voiceplayer(message.server.id).yt_url_cmp.match(args[0]):
+            app.logger.info(f"Added song to queue: {args[0]}")
+            app.voiceplayer(message.server.id).queue.put(args[0])
+        else:
+            app.logger.info(f"Seaching youtube...")
+            app.voiceplayer(message.server.id).queue.put(f"ytsearch:{' '.join(args[0:])}")
+        app.voiceplayer(message.server.id).play()
+        await app.client.send_message(message.channel, "Your song has been added to the queue")
     except Exception as e:
         app.logger.error(e)
 async def on_voice_startqueue(message, app, args, cmd):

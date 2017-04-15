@@ -1,30 +1,31 @@
-import json
+import os
 import time
 import regex
-import discord
 import asyncio
+import discord
+import requests
 import threading
 from queue import Queue
 
 class musicPlayer():
-    def __init__(self, volume,  server, app):
+    def __init__(self, server, app, volume=100):
         self.app = app
-        self.thread = None
+        self.skips = 0
         self.player = None
-        self.queue = Queue()
-        self.server_id = server
+        self.thread = None
         self.skipcount = 0
+        self.queue = Queue()
         self.skippers = list()
+        self.server_id = server
         self.lock = threading.Lock()
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
-        self.yt_seach_cmp = regex.compile(r"^(ytsearch\:)([A-z0-9]+.*)")
+        self.yt_search_cmp = regex.compile(r"^(ytsearch:)([A-z0-9]+.*)")
         self.yt_url_cmp =  regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=(?![A-z0-9]+&list=))([A-z0-9\=\&]+.*)")
-        self.no_yt_cmp = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)((\/watch\?v=[A-z0-9]+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
+        self.yt_playlist_cmp = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)((\/watch\?v=[A-z0-9]+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
     async def music_player(self, server):
         self.lock.acquire()
         self.app.logger.info("Acquired Lock")
-        self.app.logger.info(server)
         while True:
             await asyncio.sleep(2)
             if self.app.musicClient.voice_client(server):
@@ -39,7 +40,7 @@ class musicPlayer():
                                 self.app.logger.info(f"Got player object...")
                                 self.app.logger.info(item)
                                 player = await self.encode_audio(item, server)
-                                self.skipcount = 0
+                                self.skips = 0
                                 self.skippers = list()
                                 self.player = player
                                 self.player.volume = self.default_volume
@@ -82,72 +83,89 @@ class musicPlayer():
                 self.app.logger.info("Youtube url detected")
                 player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
             elif self.yt_search_cmp.match(item):
-                self.app.logger.info("Youtube search detected")
+                self.app.logger.info("Search item detected")
                 player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
             else:
                 self.app.logger.info("None of the above detected")
-                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(f"ytsearch:{item}")
             return player
         except Exception as e:
-            self.app.logger.error(f"Encoder error: {e}")
+            self.app.logger.error(e)
+            return e
+    def playlistparser(self, url):
+        r = requests.get(url)
+        urlend = url[url.rfind('=') + 1:]
+        recmp = regex.compile(r"watch\?v=\S+?list=" + urlend)
+        urls = recmp.findall(r.text)
+        urlist = list()
+        if urls:
+            for url in urls:
+                url = str(url)
+                url = url[:url.index('&')]
+                urlist.append(f"https://www.youtube.com/{url}")
+        return urlist
     def playerdecorator(func):
         def player_wrapper(self):
             if self.lock.locked() == False:
                 server = discord.utils.get(self.app.client.servers, id=self.server_id)
                 if server:
+                    self.app.logger.info("Starting Player Thread...")
                     self.thread = self.app.client.loop.create_task(self.music_player(server))
             return func(self)
         return player_wrapper
     @playerdecorator
     def play(self):
-        self.app.logger.info("Trying to start player...")
+        self.app.logger.info("Trying to start voice player...")
     @playerdecorator
     def start(self):
         if (self.lock.locked() == True) and self.player:
             try:
                 self.player.start()
-            except Exception as e:
-                self.app.logger.error("Player start command error: {e}")
+            except AttributeError:
+                self.app.logger.error("Error starting player")
     @playerdecorator
     def stop(self):
         if (self.lock.locked() == True) and self.player:
             try:
                 self.player.stop()
-            except Exception as e:
-                self.app.logger.error(f"Player stop command error: {e}")
+            except AttributeError:
+                self.app.logger.error("Error stopping player")
     @playerdecorator
     def pause(self):
         if (self.lock.locked() == True) and self.player:
             try:
                 self.player.pause()
-            except Exception as e:
-                self.app.logger.error(f"Player pause command error: {e}")
+            except AttributeError:
+                self.app.logger.error("Error pausing player")
     @playerdecorator
     def resume(self):
         if (self.lock.locked() == True) and self.player:
             try:
                 self.player.resume()
-            except Exception as e:
-                self.app.logger.error(f"Player resume command error: {e}")
+            except AttributeError:
+                self.app.logger.error("Error resuming player")
 
 class musicClient():
     def __init__(self, app):
-        self.app = app
         self.voice_clients = dict()
-    async def voice_connect(self, channel, volume=100):
+        self.app = app
+    def voice_client(self, server):
+        return self.app.client.voice_client_in(server)
+    async def voice_connect(self, channel):
+        app = self.app
+        Player = musicPlayer(channel.server.id, app)
         try:
             if not self.voice_client(channel.server):
-                Player = musicPlayer(volume, channel.server.id, self.app)
                 voiceClient = await self.app.client.join_voice_channel(channel)
                 self.voice_clients[channel.server.id] = Player
                 return voiceClient
-        except (AttributeError, IndexError, ValueError):
-            self.app.logger.error(f"Error connected to voice channel: {channel.name}")
+        except Exception as e:
+            self.app.logger.error(e)
     async def voice_disconnect(self, server):
         try:
-            await self.voice_client(server).disconnect()
-            del self.voice_clients[server.id]
-        except (AttributeError, IndexError):
-            self.app.logger.error("Error while disconnecting from voice channel")
-    def voice_client(self, server):
-        return self.app.client.voice_client_in(server)
+            for i in list(self.voice_clients[server.id].queue.queue):
+                p = self.voice_clients[server.id].queue.get()
+            del self.app.player[server.id]
+        except Exception as e:
+            self.app.logger.error(f"musicPlayer error: {e}")
+        await self.voice_client(server).disconnect()
