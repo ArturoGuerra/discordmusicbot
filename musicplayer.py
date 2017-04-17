@@ -21,7 +21,7 @@ class musicPlayer():
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
         self.yt_search_cmp = regex.compile(r"^(ytsearch:)([A-z0-9]+.*)")
-        self.yt_url_cmp =  regex.compile(r"(?:http(?:s)?:\/\/)?(?:www\.)?(?:youtube\.com)(?:(\/watch\?v=(?!\S+&list=))?(\/watch\?v=\S+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
+        self.yt_url_cmp =  regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(?:youtube\.com)(?:(\/watch\?v=(?!\S+&list=))?(\/watch\?v=\S+&list=)?(\/playlist\?list=)?)(\S+)$")
     async def music_player(self, server):
         self.lock.acquire()
         self.app.logger.info("Acquired Lock")

@@ -6,7 +6,7 @@ class Playlists():
     def __init__(self, app):
         self.app = app
         self.playlists = dict()
-        self.youtube = regex.compile(r"(?:http(?:s)?:\/\/)?(?:www\.)?(?:youtube\.com)(?:(\/watch\?v=(?!\S+&list=))?(\/watch\?v=\S+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
+        self.youtube = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(?:youtube\.com)(?:(\/watch\?v=(?!\S+&list=))?(\/watch\?v=\S+&list=)?(\/playlist\?list=)?)(\S+)$")
         self.playlist_cmp = regex.compile("^([A-z0-9])+\.txt")
         self.playlistdir = "playlists"
     def scan_playlists(self):
