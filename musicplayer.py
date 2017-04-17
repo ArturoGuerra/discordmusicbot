@@ -21,8 +21,7 @@ class musicPlayer():
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
         self.yt_search_cmp = regex.compile(r"^(ytsearch:)([A-z0-9]+.*)")
-        self.yt_url_cmp =  regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=(?![A-z0-9]+&list=))([A-z0-9\=\&]+.*)")
-        self.yt_playlist_cmp = regex.compile(r"^(?:http(?:s)?:\/\/)?(?:www\.)?(youtube\.com)(\/watch\?v=[A-z0-9]+&list=)?(\/playlist\?list=)?([A-z0-9\=\&]+.*)")
+        self.yt_url_cmp =  regex.compile(r"(?:http(?:s)?:\/\/)?(?:www\.)?(?:youtube\.com)(?:(\/watch\?v=(?!\S+&list=))?(\/watch\?v=\S+&list=)?(\/playlist\?list=)?)([A-z0-9\=\&]+.*)")
     async def music_player(self, server):
         self.lock.acquire()
         self.app.logger.info("Acquired Lock")
@@ -92,8 +91,8 @@ class musicPlayer():
         except Exception as e:
             self.app.logger.error(e)
             return e
-    def playlistparser(self, url):
-        match = self.yt_playlist_cmp.match(url)
+    def playlistparser_thread(self, url):
+        match = self.yt_url_cmp.match(url)
         if match.group(2):
             url = f"https://www.youtube.com/playlist?list={str(match.group(4))}"
         r = requests.get(url)
@@ -108,6 +107,11 @@ class musicPlayer():
                 if not url in urlist:
                     urlist.append(url)
         return urlist
+    async def playlistparser(self, url):
+        future = self.app.loop.run_in_executor(None, self.playlistparser_thread, url)
+        while future.done() == False:
+            await asyncio.sleep(1)
+        return future.result()
     def playerdecorator(func):
         def player_wrapper(self):
             if self.lock.locked() == False:

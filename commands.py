@@ -71,16 +71,18 @@ async def on_youtube_play(message, app, args, cmd):
     except Exception as e:
         app.logger.error(e)
     try:
-        if app.voiceplayer(message.server.id).yt_playlist_cmp.match(args[0]):
-            urls = app.voiceplayer(message.server.id).playlistparser(args[0])
-            app.logger.info("Playlist detected")
-            for url in urls:
-                if app.voiceplayer(message.server.id).yt_url_cmp.match(url):
-                    app.logger.info(f"Adding url to queue: {url}")
-                    app.voiceplayer(message.server.id).queue.put(url)
-        elif app.voiceplayer(message.server.id).yt_url_cmp.match(args[0]):
-            app.logger.info(f"Added song to queue: {args[0]}")
-            app.voiceplayer(message.server.id).queue.put(args[0])
+        while app.voice_client(message.server) == None:
+            await asyncio.sleep(1)
+        ytmatch = app.voiceplayer(message.server.id).yt_url_cmp.match(args[0])
+        if ytmatch:
+            if ytmatch.group(1):
+                app.voiceplayer(message.server.id).queue.put(args[0])
+            elif ytmatch.group(2) or ytmatch.group(3):
+                urls = await app.voiceplayer(message.server.id).playlistparser(args[0])
+                for url in urls:
+                    if app.voiceplayer(message.server.id).yt_url_cmp.match(url):
+                        app.logger.info(f"Adding url to queue: {url}")
+                        app.voiceplayer(message.server.id).queue.put(url)
         else:
             app.logger.info(f"Seaching youtube...")
             app.voiceplayer(message.server.id).queue.put(f"ytsearch:{' '.join(args[0:])}")
@@ -176,7 +178,7 @@ async def on_select_playlist(message, app, args, cmd):
     try:
         voiceplayer = app.voiceplayer(message.server.id)
         select_playlist = playlist.loadPlaylist(app, voiceplayer, args[0])
-        select_playlist.load_playlist()
+        await select_playlist.load_playlist()
         playlist_list.append(("Playlist Selected", f"Now playing {args[0]}"))
     except (IndexError, ValueError):
         app.logger.error("Playlist not found")

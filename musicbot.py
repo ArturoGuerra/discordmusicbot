@@ -15,14 +15,17 @@ import argparse
 import threading
 import musicplayer
 import datetime as dt
-
+import concurrent.futures
 class MusicApplication():
     color_blue = 0x1EA1F1
     color_red = 0xCD160B
     FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     def __init__(self):
-        self.client = discord.Client()
+        self.loop = asyncio.get_event_loop()
+        self.client = discord.Client(loop=self.loop)
+        self.pool = concurrent.futures.ThreadPoolExecutor(5)
+        self.loop.set_default_executor(self.pool)
         self.logger = logging.getLogger('discord')
         self.loadPlaylist = playlist.loadPlaylist
         self.musicPlaylists = playlist.Playlists(self)
