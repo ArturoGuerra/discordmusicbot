@@ -23,8 +23,8 @@ class MusicApplication():
     FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     def __init__(self):
-        self.loop = uvloop.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        self.loop = asyncio.get_event_loop()
         self.client = discord.Client(loop=self.loop)
         self.pool = concurrent.futures.ThreadPoolExecutor(10)
         self.loop.set_default_executor(self.pool)
