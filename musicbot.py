@@ -5,6 +5,7 @@ import json
 import regex
 import config
 import random
+import uvloop
 import getpass
 import asyncio
 import discord
@@ -22,9 +23,10 @@ class MusicApplication():
     FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     def __init__(self):
-        self.loop = asyncio.get_event_loop()
+        self.loop = uvloop.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.client = discord.Client(loop=self.loop)
-        self.pool = concurrent.futures.ThreadPoolExecutor(5)
+        self.pool = concurrent.futures.ThreadPoolExecutor(10)
         self.loop.set_default_executor(self.pool)
         self.logger = logging.getLogger('discord')
         self.loadPlaylist = playlist.loadPlaylist

@@ -14,6 +14,7 @@ async def on_volume(message, app, args, cmd):
         volregex = regex.compile("^([0-9])+$")
         if volregex.match(args[0]):
             vol = min(max(float(args[0])/100, 0.1), 2.0)
+            app.voiceplayer(message.server.id).default_volume = vol
             app.voiceplayer(message.server.id).player.volume = vol
             vol_msg.append(("Volume Changed", f"Volume has been set to {int(vol * 100)}"))
         else:
