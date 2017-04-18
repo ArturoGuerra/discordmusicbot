@@ -108,8 +108,8 @@ async def on_ready():
     app.musicPlaylists.clear_playlists()
     app.musicPlaylists.scan_playlists()
     for channel_id in app.channels:
+        channel = self.app.client.get_channel(channel_id)
         try:
-            channel = app.client.get_channel(channel_id)
             await app.musicClient.voice_connect(channel)
             selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), "top")
             await selectplaylist.load_playlist()

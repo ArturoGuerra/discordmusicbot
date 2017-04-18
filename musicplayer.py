@@ -1,6 +1,7 @@
 import os
 import time
 import regex
+import aiohttp
 import asyncio
 import discord
 import requests
@@ -91,13 +92,15 @@ class musicPlayer():
         except Exception as e:
             self.app.logger.error(e)
             return e
-    def playlistparser_thread(self, url):
+    async def playlistparser(self, url):
         match = self.yt_url_cmp.match(url)
         if match.group(2):
             url = f"https://www.youtube.com/playlist?list={str(match.group(4))}"
-        r = requests.get(url)
+        async with aiohttp.ClientSession(loop=self.app.loop) as session:
+            async with session.get(url) as response:
+                youtube_result = await response.text()
         recmp = regex.compile(r"watch\?v=\S+?list={}".format(str(match.group(4))))
-        urls = recmp.findall(r.text)
+        urls = recmp.findall(youtube_result)
         urlist = list()
         if urls:
             for url in urls:
@@ -107,11 +110,6 @@ class musicPlayer():
                 if not url in urlist:
                     urlist.append(url)
         return urlist
-    async def playlistparser(self, url):
-        future = self.app.loop.run_in_executor(None, self.playlistparser_thread, url)
-        while future.done() == False:
-            await asyncio.sleep(1)
-        return future.result()
     def playerdecorator(func):
         def player_wrapper(self):
             if self.lock.locked() == False:
