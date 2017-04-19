@@ -97,7 +97,7 @@ class MusicApplication():
             json.dump(config, f)
         with open('./config/channels.json', 'w') as f:
             json.dump(channels, f)
-    def start_loop(self, *args, **kwargs):
+    def bot_login(self, *args, **kwargs):
         if not self.login_lock.locked():
             try:
                 app.logger.info("Connecting to discord...")
@@ -119,7 +119,7 @@ def main():
     if app.args.dry_run:
         app.logger.info("Bot Dry Run")
         sys.exit()
-    app.start_loop(app.config.token())
+    app.bot_login(app.config.token())
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")
