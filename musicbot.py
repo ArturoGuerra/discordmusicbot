@@ -37,7 +37,6 @@ class MusicApplication():
         self.parser.add_argument("--dry-run", help="Runs the bot without connecting to discord", action="store_true")
         self.parser.add_argument("--setup", help="Runs bot setup and creates config file", action="store_true")
         self.args = self.parser.parse_args()
-        self.login_lock = threading.Lock()
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
         self.channels = config.Channels(self).channels
@@ -98,18 +97,15 @@ class MusicApplication():
         with open('./config/channels.json', 'w') as f:
             json.dump(channels, f)
     def bot_login(self, *args, **kwargs):
-        if not self.login_lock.locked():
-            try:
-                app.logger.info("Connecting to discord...")
-                app.loop.run_until_complete(app.client.start(*args, **kwargs))
-            except:
-                app.logger.info("Disconnecting from discord...")
-                app.loop.run_until_complete(app.client.logout())
-            finally:
-                app.logger.info("Closing loop...")
-                if self.login_lock.locked():
-                    self.login_lock.release()
-                app.loop.close()
+        try:
+            app.logger.info("Connecting to discord...")
+            app.loop.run_until_complete(app.client.start(*args, **kwargs))
+        except:
+            app.logger.info("Disconnecting from discord...")
+            app.loop.run_until_complete(app.client.logout())
+        finally:
+            app.logger.info("Closing loop...")
+            app.loop.close()
 
 app = MusicApplication()
 def main():
