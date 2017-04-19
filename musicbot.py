@@ -82,7 +82,9 @@ class MusicApplication():
             await self.client.send_message(channel, embed=em)
         except Exception as e:
             self.logger.error(f"Error sending Message: {e}")
-
+    async def bot_login(self):
+        await self.client.login(self.config.token())
+        await self.client.connect()
 app = MusicApplication()
 def main():
     if app.args.setup:
@@ -99,11 +101,18 @@ def main():
             json.dump(config, f)
         with open('./config/channels.json', 'w') as f:
             json.dump(channels, f)
-    if not app.args.dry_run:
-        app.logger.info("Logging into discord")
-        app.client.run(app.config.token())
-    else:
-        app.logger.info("Bot Dry Run passed")
+    if app.args.dry_run:
+        app.logger.info("Bot Dry Run")
+        sys.exit()
+    try:
+        app.logger.info("Connecting to discord...")
+        app.loop.run_until_complete(app.bot_login())
+    except:
+        app.logger.info("Disconnecting from discord...")
+        app.loop.run_until_complete(app.client.logout())
+    finally:
+        app.logger.info("Closing loop...")
+        app.loop.close()
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")
