@@ -37,6 +37,7 @@ class MusicApplication():
         self.parser.add_argument("--dry-run", help="Runs the bot without connecting to discord", action="store_true")
         self.parser.add_argument("--setup", help="Runs bot setup and creates config file", action="store_true")
         self.args = self.parser.parse_args()
+        self.login_lock = threading.Lock()
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
         self.channels = config.Channels(self).channels
@@ -82,12 +83,7 @@ class MusicApplication():
             await self.client.send_message(channel, embed=em)
         except Exception as e:
             self.logger.error(f"Error sending Message: {e}")
-    async def bot_login(self):
-        await self.client.login(self.config.token())
-        await self.client.connect()
-app = MusicApplication()
-def main():
-    if app.args.setup:
+    def bot_setup(self):
         config = dict()
         token = getpass.getpass("Token: ")
         prefix = input("Prefix: ")
@@ -101,18 +97,29 @@ def main():
             json.dump(config, f)
         with open('./config/channels.json', 'w') as f:
             json.dump(channels, f)
+    def start_loop(self, *args, **kwargs):
+        if not self.login_lock.locked():
+            try:
+                app.logger.info("Connecting to discord...")
+                app.loop.run_until_complete(app.client.start(*args, **kwargs))
+            except:
+                app.logger.info("Disconnecting from discord...")
+                app.loop.run_until_complete(app.client.logout())
+            finally:
+                app.logger.info("Closing loop...")
+                if self.login_lock.locked():
+                    self.login_lock.release()
+                app.loop.close()
+
+app = MusicApplication()
+def main():
+    if app.args.setup:
+        app.bot_setup()
+        sys.exit()
     if app.args.dry_run:
         app.logger.info("Bot Dry Run")
         sys.exit()
-    try:
-        app.logger.info("Connecting to discord...")
-        app.loop.run_until_complete(app.bot_login())
-    except:
-        app.logger.info("Disconnecting from discord...")
-        app.loop.run_until_complete(app.client.logout())
-    finally:
-        app.logger.info("Closing loop...")
-        app.loop.close()
+    app.start_loop(app.config.token())
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")
