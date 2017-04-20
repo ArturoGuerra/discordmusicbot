@@ -171,7 +171,7 @@ class musicClient():
         try:
             for i in list(self.voice_clients[server.id].queue.queue):
                 p = self.voice_clients[server.id].queue.get()
-            del self.app.player[server.id]
+            del self.voice_clients[server.id]
         except Exception as e:
             self.app.logger.error(f"musicPlayer error: {e}")
         await self.voice_client(server).disconnect()
