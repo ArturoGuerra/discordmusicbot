@@ -41,7 +41,7 @@ class MusicApplication():
         self.config = config.Config(self)
         self.channels = config.Channels(self).channels
     def voice_client(self, server):
-        return self.client.voice_client_server(server)
+        return self.client.voice_client_in(server)
     def get_permlvl(self, message):
         if message.author.server_permissions.administrator:
             return 10
