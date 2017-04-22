@@ -39,27 +39,41 @@ class configLoader():
 class Config():
     def __init__(self, app):
         self.app = app
+        self.__config = dict()
         try:
             with open("./config/config.json", 'r') as f:
-                self.config = json.load(f)
-        except FileNotFoundError:
+                self.__config = json.load(f)
+        except IOError:
             if not self.app.args.dry_run:
                 self.app.logger.error("Config file not found")
+    @property
     def token(self):
-        return self.config['token']
+        try:
+            return self.__config['token']
+        except KeyError as e:
+            self.app.logger.error(f"Key Error: {e}")
+    @property
     def prefix(self):
-        return self.config['prefix']
+        try:
+            return self.__config['prefix']
+        except KeyError as e:
+            self.app.logger.error(f"Key Error: {e}")
+    @property
     def owners(self):
-        return self.config['owners']
+        try:
+            return self.__config['owners']
+        except KeyError as e:
+            self.app.logger.error(f"Key Error: {e}")
 class Channels():
     def __init__(self, app):
         self.app = app
+        self.__channels = list()
         try:
             with open("./config/channels.json", 'r') as f:
-                self.channels = json.load(f)
+                self.__channels = json.load(f)
         except IOError:
             if not self.app.args.dry_run:
                 self.app.logger.error("Channel file not found")
+    @property
     def channels(self):
-        return self.channels
-
+        return self.__channels

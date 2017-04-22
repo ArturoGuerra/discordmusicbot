@@ -43,8 +43,10 @@ class MusicApplication():
     def voice_client(self, server):
         return self.client.voice_client_in(server)
     def get_permlvl(self, message):
-        if message.author.server_permissions.administrator:
+        if message.author.id in self.config.owners:
             return 10
+        if message.author.server_permissions.administrator:
+            return 9
         elif message.author.server_permissions.mute_members and message.author.server_permissions.deafen_members:
             return 6
         else:
@@ -115,7 +117,7 @@ def main():
     if app.args.dry_run:
         app.logger.info("Bot Dry Run")
         sys.exit()
-    app.bot_login(app.config.token())
+    app.bot_login(app.config.token)
 @app.client.event
 async def on_ready():
     app.logger.info("MadarWusic is online")
@@ -131,13 +133,17 @@ async def on_ready():
             app.logger.error(f"Connecting error: {e}")
 @app.client.event
 async def on_message(message):
-    recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix()))
+    recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix))
     if recmp.match(message.content):
         try:
             splitmsg = message.content.split(' ')
-            cmd = splitmsg[0].strip(app.config.prefix())
+            cmd = splitmsg[0].strip(app.config.prefix)
             args = splitmsg[1:]
             permlvl = app.get_permlvl(message)
+            app.logger.info(f"User level: {permlvl}")
+            if permlvl >= 10:
+                if cmd == "reloadplaylists":
+                    await commands.on_reload_playlists(message, app, args, cmd)
             if permlvl >= 5:
                 if cmd == "clearqueue":
                     await commands.on_voice_clearqueue(message. app, args, cmd)

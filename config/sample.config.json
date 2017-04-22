@@ -1,4 +1,5 @@
 {
 "token": "Bot Token",
 "prefix": "Bot Prefix",
+"owners": ["Owner IDs"],
 }

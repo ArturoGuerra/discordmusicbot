@@ -91,6 +91,11 @@ async def on_youtube_play(message, app, args, cmd):
         await app.client.send_message(message.channel, "Your song has been added to the queue")
     except Exception as e:
         app.logger.error(e)
+async def on_reload_playlists(message, app, args, cmd):
+    app.musicPlaylists.reload_playlists()
+    app.logger.info("Reloaded playlists")
+    await app.client.send_message(message.channel, "Reloaded Playlists")
+
 async def on_voice_startqueue(message, app, args, cmd):
     try:
         app.voiceplayer(message.server.id).play()
