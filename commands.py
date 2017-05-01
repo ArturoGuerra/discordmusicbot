@@ -2,6 +2,25 @@ import regex
 import asyncio
 import discord
 import playlist
+async def on_help(message, app, args, cmd):
+    cmd_list = list()
+    cmd_list.append(("Volume", "Changes music volume"))
+    cmd_list.append(("clearqueue", "Clears queued items"))
+    cmd_list.append(("join", "Joins voice channel"))
+    cmd_list.append(("leave", "Leaves voice channel"))
+    cmd_list.append(("stop", "Stops voice player"))
+    cmd_list.append(("resume", "Resumes music playback"))
+    cmd_list.append(("forceskip", "Forceskips current track"))
+    cmd_list.append(("play", "Plays youtube video url or searches youtube"))
+    cmd_list.append(("selectplaylist", "Selects a playlists to queue"))
+    cmd_list.append(("skip", "Skips track after enough people vote"))
+    cmd_list.append(("playing", "Info about current playing song"))
+    cmd_list.append(("startqueue", "Force starts queue"))
+    cmd_list.append(("listplaylists", "List of all available playlists"))
+    cmd_list.append(("queued", "Queued items"))
+    cmd_list.append(("help", "This command"))
+    em = app.make_embed(cmd_list, inline=False)
+    await app.send_reply(message.author, em)
 
 async def on_volume(message, app, args, cmd):
     vol_msg=list()
@@ -99,6 +118,13 @@ async def on_reload_playlists(message, app, args, cmd):
 async def on_voice_startqueue(message, app, args, cmd):
     try:
         app.voiceplayer(message.server.id).play()
+    except Exception as e:
+        app.logger.error(e)
+async def on_queued(message, app, args, cmd):
+    try:
+        queuesize = app.voiceplayer(message.server.id).queue.qsize()
+        em = app.make_embed(None, title="Queue", desc=f"{queuesize} Items queued")
+        await app.send_reply(message.channel, em)
     except Exception as e:
         app.logger.error(e)
 async def on_voice_clearqueue(message, app, args, cmd):

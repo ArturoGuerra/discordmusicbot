@@ -174,6 +174,10 @@ async def on_message(message):
                     await commands.on_list_playlists(message, app, args, cmd)
                 elif cmd == "startqueue":
                     await commands.on_voice_startqueue(message, app, args, cmd)
+                elif cmd == "queued":
+                    await commands.on_queued(message, app, args, cmd)
+                elif cmd == "help":
+                    await commands.on_help(message, app, args, cmd)
         except Exception as e:
             app.logger.error(f"Exception in message: {e}")
 @app.client.event
