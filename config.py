@@ -77,3 +77,7 @@ class Channels():
     @property
     def channels(self):
         return self.__channels
+
+class ConfigGen():
+    def __init__(self):
+        pass

@@ -25,18 +25,25 @@ class MusicApplication():
     def __init__(self):
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         self.loop = asyncio.get_event_loop()
-        self.client = discord.Client(loop=self.loop)
         self.pool = concurrent.futures.ThreadPoolExecutor(10)
         self.loop.set_default_executor(self.pool)
         self.logger = logging.getLogger('discord')
+        self.parser = argparse.ArgumentParser()
+        self.parser.add_argument("--dry-run", help="Runs the bot without connecting to discord", action="store_true")
+        self.parser.add_argument("--setup", help="Runs bot setup and creates config file", action="store_true")
+        self.parser.add_argument("--shard-id", help="Instance shard ID", type=int, nargs='?')
+        self.parser.add_argument("--shard-count", help="Total number of shards", type=int, nargs='?')
+        self.args = self.parser.parse_args()
+        if (isinstance(self.args.shard_count, int)) and isinstance(self.args.shard_id, int):
+            self.logger.info(f"Sharding: Shards {self.args.shard_count} Shard ID: {self.args.shard_id}")
+            self.client = discord.Client(loop=self.loop, shard_id=self.args.shard_id, shard_count=self.args.shard_count)
+        else:
+            self.logger.warning("No shards found")
+            self.client = discord.Client(loop=self.loop)
         self.loadPlaylist = playlist.loadPlaylist
         self.musicPlaylists = playlist.Playlists(self)
         self.musicPlayer = musicplayer.musicPlayer
         self.musicClient = musicplayer.musicClient(self)
-        self.parser = argparse.ArgumentParser()
-        self.parser.add_argument("--dry-run", help="Runs the bot without connecting to discord", action="store_true")
-        self.parser.add_argument("--setup", help="Runs bot setup and creates config file", action="store_true")
-        self.args = self.parser.parse_args()
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
         self.channels = config.Channels(self).channels
@@ -120,7 +127,7 @@ def main():
     app.bot_login(app.config.token)
 @app.client.event
 async def on_ready():
-    app.logger.info("MadarWusic is online")
+    app.logger.info(f"{app.client.name} is online")
     app.musicPlaylists.clear_playlists()
     app.musicPlaylists.scan_playlists()
     for channel_id in app.channels:
