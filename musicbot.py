@@ -105,7 +105,7 @@ class MusicApplication():
             json.dump(config, f)
         with open('./config/channels.json', 'w') as f:
             json.dump(channels, f)
-    def bot_login(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         try:
             app.logger.info("Connecting to discord...")
             app.loop.run_until_complete(app.client.start(*args, **kwargs))
@@ -124,10 +124,12 @@ def main():
     if app.args.dry_run:
         app.logger.info("Bot Dry Run")
         sys.exit()
-    app.bot_login(app.config.token)
+    app.run(app.config.token)
+
+
 @app.client.event
 async def on_ready():
-    app.logger.info(f"{app.client.name} is online")
+    app.logger.info(f"{app.client.user.name} is online")
     app.musicPlaylists.clear_playlists()
     app.musicPlaylists.scan_playlists()
     for channel_id in app.channels:
