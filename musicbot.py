@@ -190,6 +190,23 @@ async def on_message(message):
         except Exception as e:
             app.logger.error(f"Exception in message: {e}")
 @app.client.event
+async def on_voice_state_update(before, after):
+    app.logger.info("Voice state update")
+    try:
+        voice = app.voice_client(after.server)
+        if not voice:
+            raise TypeError("Voice Client not found")
+        voice_members = voice.channel.voice_members
+        if len(voice_members) == 1:
+            app.voiceplayer(after.server.id).pause()
+            app.logger.info(f"Paused voice player in: {after.server.name}")
+        elif len(voice_members) > 1:
+            app.voiceplayer(after.server.id).resume()
+            app.logger.info(f"Resumed voice player in: {after.server.name}")
+    except Exception as e:
+        app.logger.error(e)
+
+@app.client.event
 async def on_server_join(server):
     pass
 
