@@ -177,7 +177,6 @@ async def on_voice_force_skip(message, app, args, cmd):
     except Exception as e:
         app.logger.error(e)
         return
-    await app.send_reply(message.channel, "Force skipped track")
 async def on_voice_playing(message, app, args, cmd):
     try:
         player = app.voiceplayer(message.server.id).player
