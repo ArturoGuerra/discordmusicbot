@@ -2,6 +2,31 @@ import regex
 import asyncio
 import discord
 import playlist
+from persistence import *
+
+async def on_set_default_channel(message, app, args, cmd):
+    try:
+        app.logger.info(f"Server Setup: {message.server.name}")
+        if len(args) > 0:
+            app.logger.info(f"Channel: {args[0]} Playlist: {args[1]}")
+            Servers.update(channel=args[0], playlist=args[1]).where(Servers.server == message.server.id).execute()
+        else:
+            app.logger.info(f"Channel: {args[0]}")
+            Servers.update(channel=args[0]).where(Servers.server == message.server.id).execute()
+    except Exception as e:
+        app.logger.error(e)
+
+async def on_init(message, app, args, cmd):
+    try:
+        for server in list(app.client.servers):
+            try:
+                s = Servers.get(Servers.server == server.id)
+            except Exception as e:
+                app.logger.error(f"Server {server.name} not found, inserting....")
+                s = Servers.create(server=server.id)
+    except Exception as e:
+        app.logger.error(e)
+
 async def on_help(message, app, args, cmd):
     cmd_list = list()
     cmd_list.append(("Volume", "Changes music volume"))
@@ -46,16 +71,25 @@ async def on_volume(message, app, args, cmd):
         em = app.make_embed(vol_msg)
         await app.send_reply(message.channel, em)
 async def on_list_playlists(message, app, args, cmd):
-    x = 0
-    playlist_list=list()
     try:
-        for playlist in app.musicPlaylists.playlists:
-            x += 1
-            playlist_list.append((f"Playlist {x}", playlist))
-        em = app.make_embed(playlist_list)
-        await app.send_reply(message.channel, em)
+        playlists = Playlists.select()
+        playlist_list = list()
+        for playlist in playlists:
+            if playlist.playlist not in playlist_list:
+                playlist_list.append(playlist.playlist)
+        msg_list=list()
+        num=0
+        for playlist in playlist_list:
+            num+=1
+            msg_list.append((num, playlist))
+        if len(msg_list) > 0:
+            embed = app.make_embed(msg_list)
+            await app.send_reply(message.channel, embed)
     except Exception as e:
         app.logger.error(e)
+
+
+
 async def on_voice_connect(message, app, args, cmd):
     connectlist=list()
     try:
@@ -110,10 +144,6 @@ async def on_youtube_play(message, app, args, cmd):
         await app.client.send_message(message.channel, "Your song has been added to the queue")
     except Exception as e:
         app.logger.error(e)
-async def on_reload_playlists(message, app, args, cmd):
-    app.musicPlaylists.reload_playlists()
-    app.logger.info("Reloaded playlists")
-    await app.client.send_message(message.channel, "Reloaded Playlists")
 
 async def on_voice_startqueue(message, app, args, cmd):
     try:
@@ -205,18 +235,34 @@ async def on_voice_pause(message, app, args, cmd):
         return
     await app.client.send_message(message.channel, "Voice player paused")
 async def on_select_playlist(message, app, args, cmd):
-    playlist_list=list()
     try:
         voiceplayer = app.voiceplayer(message.server.id)
-        select_playlist = playlist.loadPlaylist(app, voiceplayer, args[0])
+    except KeyError:
+        await app.musicClient.voice_connect(message.author.voice.voice_channel)
+        voiceplayer = app.voiceplayer(message.server.id)
+    try:
+        playlist_query = Playlists.select().where(Playlists.playlist == args[0])
+        select_playlist = playlist.loadPlaylist(app, voiceplayer, playlist_query)
         await select_playlist.load_playlist()
-        playlist_list.append(("Playlist Selected", f"Now playing {args[0]}"))
-    except (IndexError, ValueError):
-        app.logger.error("Playlist not found")
-        playlist_list.append(("Playlist Selection error", "Playlist not found"))
-    if len(playlist_list) > 0:
-        em = app.make_embed(playlist_list)
-        await app.send_reply(message.channel, em)
+    except Exception as e:
+        app.logger.error(e)
 
+
+async def on_add_playlist(message, app, args, cmd):
+    try:
+        links = args[1:]
+        for link in links:
+            try:
+                Playlists.create(playlist=args[0], link=link)
+            except Exception as e:
+                app.logger.error(e)
+    except Exception as e:
+        app.logger.error(e)
+
+async def on_remove_playlist(message, app, args, cmd):
+    if len(args) > 1:
+        Playlists.delete().where((Playlists.playlist == args[0]) & (Playlists.link == args[1])).execute()
+    else:
+        Playlists.delete().where(Playlists.playlist == args[0]).execute()
 
 

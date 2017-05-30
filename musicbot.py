@@ -17,6 +17,7 @@ import threading
 import musicplayer
 import datetime as dt
 import concurrent.futures
+from persistence import *
 class MusicApplication():
     color_blue = 0x1EA1F1
     color_red = 0xCD160B
@@ -30,6 +31,7 @@ class MusicApplication():
         self.logger = logging.getLogger('discord')
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("--dry-run", help="Runs the bot without connecting to discord", action="store_true")
+        self.parser.add_argument("--no-db", help="Starts the bot without the database", action="store_true")
         self.parser.add_argument("--setup", help="Runs bot setup and creates config file", action="store_true")
         self.parser.add_argument("--shard-id", help="Instance shard ID", type=int, nargs='?')
         self.parser.add_argument("--shard-count", help="Total number of shards", type=int, nargs='?')
@@ -40,15 +42,30 @@ class MusicApplication():
         else:
             self.logger.warning("No shards found")
             self.client = discord.Client(loop=self.loop)
-        self.loadPlaylist = playlist.loadPlaylist
-        self.musicPlaylists = playlist.Playlists(self)
+
         self.musicPlayer = musicplayer.musicPlayer
         self.musicClient = musicplayer.musicClient(self)
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
-        self.channels = config.Channels(self).channels
     def voice_client(self, server):
         return self.client.voice_client_in(server)
+    def initdb(self):
+        self.app_lock.acquire()
+        self.logger.info("Application lock acquired")
+        self.logger.info("Connectiong to database...")
+        if not my_db:
+            app.logger.warning("Faild to connect")
+            return
+        my_db.connect()
+        if Servers.table_exists() and Playlists.table_exists():
+            app.logger.info("Connected to Database !!!!")
+        else:
+            self.logger.info("Populating Database...")
+            my_db.create_tables([Servers, Playlists], safe=True)
+            self.logger.info("Database is now populated")
+        my_db.close()
+        self.app_lock.release()
+        self.logger.info("Application lock released")
     def get_permlvl(self, message):
         if message.author.id in self.config.owners:
             return 10
@@ -91,52 +108,53 @@ class MusicApplication():
             await self.client.send_message(channel, embed=em)
         except Exception as e:
             self.logger.error(f"Error sending Message: {e}")
-    def bot_setup(self):
-        config = dict()
-        token = getpass.getpass("Token: ")
-        prefix = input("Prefix: ")
-        config['token'] = token
-        config['prefix'] = prefix
-        config['owners'] = list()
-        channels = list()
-        channel_id = input("Channel ID: ")
-        channels.append(channel_id)
-        with open('./config/config.json', 'w') as f:
-            json.dump(config, f)
-        with open('./config/channels.json', 'w') as f:
-            json.dump(channels, f)
+    async def admin_pm(self, msg):
+        try:
+            app_info  = await app.client.application_info()
+            admin_user = app_info.owner
+            await app.client.start_private_message(admin_user)
+            await app.client.send_message(admin_user, msg)
+        except Exception as e:
+            self.logger.info(e)
     def run(self, *args, **kwargs):
         try:
-            app.logger.info("Connecting to discord...")
-            app.loop.run_until_complete(app.client.start(*args, **kwargs))
-        except:
-            app.logger.info("Disconnecting from discord...")
-            app.loop.run_until_complete(app.client.logout())
+            self.logger.info("Connecting to discord...")
+            self.loop.run_until_complete(self.client.start(*args, **kwargs))
+        except Exception as e:
+            self.logger.info(f"Disconnecting from discord with error: {e}")
+            self.loop.run_until_complete(self.client.logout())
         finally:
-            app.logger.info("Closing loop...")
-            app.loop.close()
+            self.logger.info("Closing Loop")
+            self.loop.close()
+
+
+
 
 app = MusicApplication()
 def main():
     if app.args.setup:
-        app.bot_setup()
+        config.ConfigGenerator(app).bot_setup()
         sys.exit()
     if app.args.dry_run:
         app.logger.info("Bot Dry Run")
         sys.exit()
+    if not app.args.no_db:
+        app.initdb()
+        app.logger.info("Initiazing Database!!!")
     app.run(app.config.token)
 
 
 @app.client.event
 async def on_ready():
     app.logger.info(f"{app.client.user.name} is online")
-    app.musicPlaylists.clear_playlists()
-    app.musicPlaylists.scan_playlists()
-    for channel_id in app.channels:
+    app.logger.info(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
+    await app.admin_pm(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
+    for server in Servers.select():
         try:
-            channel = app.client.get_channel(channel_id)
+            channel = app.client.get_channel(str(server.channel))
             await app.musicClient.voice_connect(channel)
-            selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), "top")
+            playlist_queue = Playlists.select().where(Playlists.playlist == server.playlist)
+            selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
             await selectplaylist.load_playlist()
         except Exception as e:
             app.logger.error(f"Connecting error: {e}")
@@ -151,11 +169,17 @@ async def on_message(message):
             permlvl = app.get_permlvl(message)
             app.logger.info(f"User level: {permlvl}")
             if permlvl >= 10:
-                if cmd == "reloadplaylists":
-                    await commands.on_reload_playlists(message, app, args, cmd)
+                if cmd == "addplaylist":
+                    await commands.on_add_playlist(message, app, args, cmd)
+                elif cmd == "rmplaylist":
+                    await commands.on_remove_playlist(message, app, args, cmd)
+                elif cmd == "init":
+                    await commands.on_init(message, app, args, cmd)
             if permlvl >= 5:
                 if cmd == "clearqueue":
-                    await commands.on_voice_clearqueue(message. app, args, cmd)
+                    await commands.on_voice_clearqueue(message, app, args, cmd)
+                elif cmd == "serverconfig":
+                    await commands.on_set_default_channel(message, app, args, cmd)
                 elif cmd == "stop":
                     await commands.on_voice_stop(message, app, args, cmd)
                 elif cmd == "volume":
@@ -208,11 +232,18 @@ async def on_voice_state_update(before, after):
 
 @app.client.event
 async def on_server_join(server):
-    pass
+    await app.admin_pm(f"Joined: {server.name}")
+    try:
+        s = Servers.get(Servers.server == server.id)
+    except:
+        s = Servers.create(server=server.id)
 
 @app.client.event
 async def on_server_leave(server):
-    pass
+    await app.admin_pm(f"Left: {server.name}")
+    try:
+        Servers.delete().where(Servers.server == server.id)
+    except: pass
 
 if __name__ == "__main__":
     app.logger.info("Started as script...")

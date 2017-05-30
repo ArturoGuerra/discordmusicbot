@@ -1,24 +1,74 @@
+import sys
 import json
-class configLoader():
-    def __init__(self, configFile, app):
-        self.configFile = configFile
+import getpass
+
+#Creates bot config file
+class ConfigGenerator():
+    def __init__(self, app):
         self.app = app
-    def loadecorator(func):
-        def wrapper(self, *args):
+        self.__config = dict()
+        with open("./config/config.sample.json", 'r') as f:
+            self.__sample_config = json.load(f)
+    def bot_setup(self):
+        special = ['token']
+        for key in self.__sample_config:
+            if key in special:
+                special_key = getpass.getpass(prompt=f"{key}: ")
+                self.__config[key]  = special_key
+            elif isinstance(self.__sample_config[key], list):
+                self.__config[key] = list()
+                keys = input(f"{key}: ")
+                for i in keys.split(' '):
+                    self.__config[key].append(i)
+            else:
+                key_input = input(f"{key}: ")
+                self.__config[key] = key_input
+        with open("./config/config.json", "w") as f:
+            json.dump(self.__config, f)
+        return self.__config
+
+#Loads bot config file
+class Config():
+    def __init__(self, app):
+        self.app = app
+        self.__config = dict()
+        self.correction_db = 1
+        self.app.app_lock.acquire()
+        try:
+            with open('./config/config.json', 'r') as f:
+                self.__config = json.load(f)
+        except FileNotFoundError as e:
+            if not self.app.args.setup and not self.app.args.dry_run:
+                self.app.logger.info("Config file not found, Creating...")
+                self.__config = ConfigGenerator(self.app).bot_setup()
+                self.app.logger.info("Config file created successfully")
+            else:
+                 self.app.logger.error(e)
+        finally:
+            self.app.app_lock.release()
+        for attr in self.__config:
+            setattr(self.__class__, attr, self.__config[attr])
+
+#Loads random file
+class jsonLoader():
+    def __init__(self, configFile, app):
+        self.app = app
+        self.data = dict()
+        self.configFile = configFile
+    def datadecorator(func):
+        def wrapper(self, *args, **kwargs):
             try:
                 with open(self.configFile, 'r') as f:
                     self.data = json.load(f)
-                    self.app.logger.info("Loaded file...")
             except FileNotFoundError as e:
-                if not self.app.args.dry_run:
-                   raise FileNotFoundError("File was not found")
+                raise FileNotFoundError("File was not found")
             else:
-                return func(self, *args)
+                func(*args, **kwargs)
         return wrapper
-    @loadecorator
+    @datadecorator
     def load(self):
-        self.app.logger.info("Trying to load file...")
-    @loadecorator
+        self.app.logger.info("Loaded file...")
+    @datadecorator
     def get(self, key):
         try:
             value = self.data[key]
@@ -26,7 +76,7 @@ class configLoader():
             raise KeyError(f"{key} was not found")
         else:
             return value
-    @loadecorator
+    @datadecorator
     def write(self, key, data):
         try:
             self.data[key] = data
@@ -35,49 +85,3 @@ class configLoader():
             self.data[key] = data
         with open(self.configFile, 'w') as f:
             json.dump(self.configFile, f)
-
-class Config():
-    def __init__(self, app):
-        self.app = app
-        self.__config = dict()
-        try:
-            with open("./config/config.json", 'r') as f:
-                self.__config = json.load(f)
-        except IOError:
-            if not self.app.args.dry_run:
-                self.app.logger.error("Config file not found")
-    @property
-    def token(self):
-        try:
-            return self.__config['token']
-        except KeyError as e:
-            self.app.logger.error(f"Key Error: {e}")
-    @property
-    def prefix(self):
-        try:
-            return self.__config['prefix']
-        except KeyError as e:
-            self.app.logger.error(f"Key Error: {e}")
-    @property
-    def owners(self):
-        try:
-            return self.__config['owners']
-        except KeyError as e:
-            self.app.logger.error(f"Key Error: {e}")
-class Channels():
-    def __init__(self, app):
-        self.app = app
-        self.__channels = list()
-        try:
-            with open("./config/channels.json", 'r') as f:
-                self.__channels = json.load(f)
-        except IOError:
-            if not self.app.args.dry_run:
-                self.app.logger.error("Channel file not found")
-    @property
-    def channels(self):
-        return self.__channels
-
-class ConfigGen():
-    def __init__(self):
-        pass

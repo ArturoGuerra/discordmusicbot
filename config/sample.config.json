@@ -1,5 +1,9 @@
 {
 "token": "Bot Token",
 "prefix": "Bot Prefix",
+"database": "Database Name",
+"dbuser": "Database User",
+"dbpass": "Database Password",
+"dbhost": "Database Host",
 "owners": ["Owner IDs"],
 }
