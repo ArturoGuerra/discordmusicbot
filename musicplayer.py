@@ -152,25 +152,33 @@ class musicPlayer():
 
 class musicClient():
     def __init__(self, app):
+        self.voice_players = dict()
         self.voice_clients = dict()
         self.app = app
     def voice_client(self, server):
-        return self.app.client.voice_client_in(server)
+        try:
+            return self.voice_clients[server.id]
+        except KeyError:
+            return None
     async def voice_connect(self, channel):
         app = self.app
         Player = musicPlayer(channel.server.id, app)
         try:
             if not self.voice_client(channel.server):
                 voiceClient = await self.app.client.join_voice_channel(channel)
-                self.voice_clients[channel.server.id] = Player
+                self.voice_players[channel.server.id] = Player
+                self.voice_clients[channel.server.id] = voiceClient
                 return voiceClient
         except Exception as e:
             self.app.logger.error(e)
     async def voice_disconnect(self, server):
         try:
-            for i in list(self.voice_clients[server.id].queue.queue):
-                p = self.voice_clients[server.id].queue.get()
+            for i in list(self.voice_players[server.id].queue.queue):
+                p = self.voice_players[server.id].queue.get()
+            try:
+                await self.voice_client(server).disconnect()
+            except: pass
+            del self.voice_players[server.id]
             del self.voice_clients[server.id]
         except Exception as e:
             self.app.logger.error(f"musicPlayer error: {e}")
-        await self.voice_client(server).disconnect()

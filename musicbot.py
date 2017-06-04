@@ -43,12 +43,14 @@ class MusicApplication():
             self.logger.warning("No shards found")
             self.client = discord.Client(loop=self.loop)
 
-        self.musicPlayer = musicplayer.musicPlayer
         self.musicClient = musicplayer.musicClient(self)
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
     def voice_client(self, server):
-        return self.client.voice_client_in(server)
+        try:
+            return self.musicClient.voice_clients[server.id]
+        except KeyError:
+            return None
     def initdb(self):
         self.app_lock.acquire()
         self.logger.info("Application lock acquired")
@@ -77,9 +79,9 @@ class MusicApplication():
             return 0
     def voiceplayer(self, server):
         try:
-            return self.musicClient.voice_clients[server]
+            return self.musicClient.voice_players[server]
         except KeyError:
-            raise KeyError("Voice Player not found")
+            return None
     def make_embed(self, field_list, title="", desc="", title_url="", author_url=None, inline=True, footer=None, thumb=None, footer_url=None, color=color_blue, icon_url=None, set_image=None):
         embed = discord.Embed(title=title, url=title_url, description=desc, colour=color)
         if not author_url:
