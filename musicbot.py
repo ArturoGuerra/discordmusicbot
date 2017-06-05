@@ -227,7 +227,7 @@ async def on_message(message):
 @app.client.event
 async def on_voice_state_update(before, after):
     app.logger.info("Voice state update")
-    if not app.app_lock.is_locked():
+    if not app.app_lock.locked():
         try:
             voice = app.voice_client(after.server)
             if not voice:
@@ -244,7 +244,7 @@ async def on_voice_state_update(before, after):
 
 @app.client.event
 async def on_server_join(server):
-    if not app.app_lock.is_locked():
+    if not app.app_lock.locked():
         try:
             my_db.connect()
             await app.admin_pm(f"Joined: {server.name}")
@@ -257,7 +257,7 @@ async def on_server_join(server):
             app.logger.error(e)
 @app.client.event
 async def on_server_leave(server):
-    if not app.app_lock.is_locked():
+    if not app.app_lock.locked():
         try:
             my_db.connect()
             await app.admin_pm(f"Left: {server.name}")
