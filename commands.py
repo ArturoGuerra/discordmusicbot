@@ -5,10 +5,11 @@ import playlist
 from persistence import *
 
 def peeweeconnect(func):
-    my_db.connect()
     async def wrapper(*args, **kwargs):
-        return await func(*args, **kwargs)
-    my_db.close()
+        my_db.connect()
+        function = await func(*args)
+        my_db.close()
+        return function
     return wrapper
 
 @peeweeconnect

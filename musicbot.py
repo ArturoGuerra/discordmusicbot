@@ -148,18 +148,26 @@ def main():
 
 @app.client.event
 async def on_ready():
-    app.logger.info(f"{app.client.user.name} is online")
-    app.logger.info(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
-    await app.admin_pm(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
-    for server in Servers.select():
-        try:
-            channel = app.client.get_channel(str(server.channel))
-            await app.musicClient.voice_connect(channel)
-            playlist_queue = Playlists.select().where(Playlists.playlist == server.playlist)
-            selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
-            await selectplaylist.load_playlist()
-        except Exception as e:
-            app.logger.error(f"Connecting error: {e}")
+    try:
+        app.app_lock.acquire()
+        my_db.connect()
+        app.logger.info(f"{app.client.user.name} is online")
+        app.logger.info(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
+        await app.admin_pm(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
+        for server in Servers.select():
+            try:
+                channel = app.client.get_channel(str(server.channel))
+                await app.musicClient.voice_connect(channel)
+                playlist_queue = Playlists.select().where(Playlists.playlist == server.playlist)
+                selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
+                await selectplaylist.load_playlist()
+            except Exception as e:
+                app.logger.error(f"Connecting error: {e}")
+        my_db.close()
+    except Exception as e:
+        app.logger.error(e)
+    finally:
+        app.app_lock.release()
 @app.client.event
 async def on_message(message):
     recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix))
@@ -215,37 +223,50 @@ async def on_message(message):
                     await commands.on_help(message, app, args, cmd)
         except Exception as e:
             app.logger.error(f"Exception in message: {e}")
+
 @app.client.event
 async def on_voice_state_update(before, after):
     app.logger.info("Voice state update")
-    try:
-        voice = app.voice_client(after.server)
-        if not voice:
-            raise TypeError("Voice Client not found")
-        voice_members = voice.channel.voice_members
-        if len(voice_members) == 1:
-            app.voiceplayer(after.server.id).pause()
-            app.logger.info(f"Paused voice player in: {after.server.name}")
-        elif len(voice_members) > 1:
-            app.voiceplayer(after.server.id).resume()
-            app.logger.info(f"Resumed voice player in: {after.server.name}")
-    except Exception as e:
-        app.logger.error(e)
+    if not app.app_lock.is_locked():
+        try:
+            voice = app.voice_client(after.server)
+            if not voice:
+                raise TypeError("Voice Client not found")
+            voice_members = voice.channel.voice_members
+            if len(voice_members) == 1:
+                app.voiceplayer(after.server.id).pause()
+                app.logger.info(f"Paused voice player in: {after.server.name}")
+            elif len(voice_members) > 1:
+                app.voiceplayer(after.server.id).resume()
+                app.logger.info(f"Resumed voice player in: {after.server.name}")
+        except Exception as e:
+            app.logger.error(e)
 
 @app.client.event
 async def on_server_join(server):
-    await app.admin_pm(f"Joined: {server.name}")
-    try:
-        s = Servers.get(Servers.server == server.id)
-    except:
-        s = Servers.create(server=server.id)
-
+    if not app.app_lock.is_locked():
+        try:
+            my_db.connect()
+            await app.admin_pm(f"Joined: {server.name}")
+            try:
+                s = Servers.get(Servers.server == server.id)
+            except:
+                s = Servers.create(server=server.id)
+            my_db.close()
+        except Exception as e:
+            app.logger.error(e)
 @app.client.event
 async def on_server_leave(server):
-    await app.admin_pm(f"Left: {server.name}")
-    try:
-        Servers.delete().where(Servers.server == server.id)
-    except: pass
+    if not app.app_lock.is_locked():
+        try:
+            my_db.connect()
+            await app.admin_pm(f"Left: {server.name}")
+            try:
+                Servers.delete().where(Servers.server == server.id)
+            except: pass
+            my_db.close()
+        except Exception as e:
+            app.logger.error(e)
 
 if __name__ == "__main__":
     app.logger.info("Started as script...")
