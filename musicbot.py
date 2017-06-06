@@ -166,8 +166,8 @@ async def on_ready():
 #        my_db.close()
     except Exception as e:
         app.logger.error(e)
-    finally:
-        app.app_lock.release()
+   # finally:
+   #     app.app_lock.release()
 @app.client.event
 async def on_message(message):
     recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix))
