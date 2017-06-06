@@ -12,7 +12,6 @@ def peeweeconnect(func):
         return function
     return wrapper
 
-@peeweeconnect
 async def on_set_default_channel(message, app, args, cmd):
     try:
         app.logger.info(f"Server Setup: {message.server.name}")
@@ -25,7 +24,6 @@ async def on_set_default_channel(message, app, args, cmd):
     except Exception as e:
         app.logger.error(e)
 
-@peeweeconnect
 async def on_init(message, app, args, cmd):
     try:
         for server in list(app.client.servers):
@@ -80,7 +78,6 @@ async def on_volume(message, app, args, cmd):
     if len(vol_msg) > 0:
         em = app.make_embed(vol_msg)
         await app.send_reply(message.channel, em)
-@peeweeconnect
 async def on_list_playlists(message, app, args, cmd):
     try:
         playlists = Playlists.select()
@@ -245,7 +242,6 @@ async def on_voice_pause(message, app, args, cmd):
         app.logger.error(e)
         return
     await app.client.send_message(message.channel, "Voice player paused")
-@peeweeconnect
 async def on_select_playlist(message, app, args, cmd):
     try:
         voiceplayer = app.voiceplayer(message.server.id)
@@ -260,7 +256,6 @@ async def on_select_playlist(message, app, args, cmd):
         app.logger.error(e)
 
 
-@peeweeconnect
 async def on_add_playlist(message, app, args, cmd):
     try:
         links = args[1:]
@@ -272,7 +267,6 @@ async def on_add_playlist(message, app, args, cmd):
     except Exception as e:
         app.logger.error(e)
 
-@peeweeconnect
 async def on_remove_playlist(message, app, args, cmd):
     if len(args) > 1:
         Playlists.delete().where((Playlists.playlist == args[0]) & (Playlists.link == args[1])).execute()

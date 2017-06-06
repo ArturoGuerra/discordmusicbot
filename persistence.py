@@ -2,9 +2,14 @@ import config
 import pymysql
 import musicbot
 from peewee import *
+from playhouse.shortcuts import RetryOperationalError
 cfg = musicbot.MusicApplication().config
+
+class MyRetryDB(RetryOperationalError, MySQLDatabase):
+        pass
+
 try:
-    my_db = MySQLDatabase(
+    my_db = MyRetryDB(
             cfg.database,
             host=cfg.dbhost,
             port=3306,

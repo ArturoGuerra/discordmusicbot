@@ -149,8 +149,8 @@ def main():
 @app.client.event
 async def on_ready():
     try:
-        app.app_lock.acquire()
-        my_db.connect()
+#        app.app_lock.acquire()
+#        my_db.connect()
         app.logger.info(f"{app.client.user.name} is online")
         app.logger.info(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
         await app.admin_pm(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
@@ -163,7 +163,7 @@ async def on_ready():
                 await selectplaylist.load_playlist()
             except Exception as e:
                 app.logger.error(f"Connecting error: {e}")
-        my_db.close()
+#        my_db.close()
     except Exception as e:
         app.logger.error(e)
     finally:
@@ -226,8 +226,8 @@ async def on_message(message):
 
 @app.client.event
 async def on_voice_state_update(before, after):
-    app.logger.info("Voice state update")
-    if not app.app_lock.locked():
+        app.logger.info("Voice state update")
+ #   if not app.app_lock.locked():
         try:
             voice = app.voice_client(after.server)
             if not voice:
@@ -244,15 +244,15 @@ async def on_voice_state_update(before, after):
 
 @app.client.event
 async def on_server_join(server):
-    if not app.app_lock.locked():
+ #   if not app.app_lock.locked():
         try:
-            my_db.connect()
+  #          my_db.connect()
             await app.admin_pm(f"Joined: {server.name}")
             try:
                 s = Servers.get(Servers.server == server.id)
             except:
                 s = Servers.create(server=server.id)
-            my_db.close()
+   #         my_db.close()
         except Exception as e:
             app.logger.error(e)
 @app.client.event
