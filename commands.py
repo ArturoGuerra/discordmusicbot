@@ -37,6 +37,7 @@ async def on_init(message, app, args, cmd):
 
 async def on_help(message, app, args, cmd):
     cmd_list = list()
+    cmd_list.append(("serverconfig", "Sets default channel and playlist: `$serverconfig <channel ID> <playlist name>`"))
     cmd_list.append(("Volume", "Changes music volume"))
     cmd_list.append(("clearqueue", "Clears queued items"))
     cmd_list.append(("join", "Joins voice channel"))
@@ -108,6 +109,10 @@ async def on_voice_connect(message, app, args, cmd):
         if not channel:
             raise discord.DiscordException("Channel not found")
         await app.musicClient.voice_connect(channel)
+        server = Servers.get(Servers.server == message.server.id)
+        playlist_queue = Playlists.select().where(Playlists.playlist == server.playlist)
+        selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
+        await selectplaylist.load_playlist()
         connectlist.append(("Connected to voice", f"Connected to {channel.name}"))
     except discord.Forbidden as e:
         app.logger.error(e)
