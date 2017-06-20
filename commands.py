@@ -187,6 +187,7 @@ async def on_voice_stop(message, app, args, cmd):
     try:
         for i in list(player.queue.queue):
             player.queue.get()
+        player.stop_player = True
         player.stop()
     except Exception as e:
         app.logger.error(e)
@@ -257,6 +258,7 @@ async def on_select_playlist(message, app, args, cmd):
         playlist_query = Playlists.select().where(Playlists.playlist == args[0])
         select_playlist = playlist.loadPlaylist(app, voiceplayer, playlist_query)
         await select_playlist.load_playlist()
+        voiceplayer.play()
     except Exception as e:
         app.logger.error(e)
 

@@ -21,7 +21,7 @@ from persistence import *
 class MusicApplication():
     color_blue = 0x1EA1F1
     color_red = 0xCD160B
-    FORMAT = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
+    FORMAT = '%(asctime)s:%(name)s:%(module)s:%(levelname)s: %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
     def __init__(self):
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -48,7 +48,7 @@ class MusicApplication():
         self.config = config.Config(self)
     def voice_client(self, server):
         try:
-            return self.musicClient.voice_clients[server.id]
+            return self.musicClient.voice_client(server)
         except KeyError:
             return None
     def initdb(self):
@@ -161,6 +161,7 @@ async def on_ready():
                 playlist_queue = Playlists.select().where(Playlists.playlist == server.playlist)
                 selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
                 await selectplaylist.load_playlist()
+                app.voiceplayer(channel.server.id).play()
             except Exception as e:
                 app.logger.error(f"Connecting error: {e}")
 #        my_db.close()
@@ -224,23 +225,22 @@ async def on_message(message):
         except Exception as e:
             app.logger.error(f"Exception in message: {e}")
 
-@app.client.event
-async def on_voice_state_update(before, after):
-        app.logger.info("Voice state update")
- #   if not app.app_lock.locked():
-        try:
-            voice = app.voice_client(after.server)
-            if not voice:
-                raise TypeError("Voice Client not found")
-            voice_members = voice.channel.voice_members
-            if len(voice_members) == 1:
-                app.voiceplayer(after.server.id).pause()
-                app.logger.info(f"Paused voice player in: {after.server.name}")
-            elif len(voice_members) > 1:
-                app.voiceplayer(after.server.id).resume()
-                app.logger.info(f"Resumed voice player in: {after.server.name}")
-        except Exception as e:
-            app.logger.error(e)
+#@app.client.event
+#async def on_voice_state_update(before, after):
+#        app.logger.info("Voice state update")
+#        try:
+#            voice = app.voice_client(after.server)
+#            if not voice:
+#                raise TypeError("Voice Client not found")
+#            voice_members = voice.channel.voice_members
+#            if len(voice_members) == 1:
+#                app.voiceplayer(after.server.id).pause()
+#                app.logger.info(f"Paused voice player in: {after.server.name}")
+#            elif len(voice_members) > 1:
+#                app.voiceplayer(after.server.id).resume()
+#                app.logger.info(f"Resumed voice player in: {after.server.name}")
+#        except Exception as e:
+#            app.logger.error(e)
 
 @app.client.event
 async def on_server_join(server):

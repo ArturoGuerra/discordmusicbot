@@ -8,7 +8,7 @@ class loadPlaylist():
         self.app = app
         self.playlist = playlist
         self.voiceplayer = voiceplayer
-    async def load_playlist(self):
+    async def load_playlist(self, autoplay=True):
         for song in self.playlist:
             url = song.link.rstrip()
             match = self.voiceplayer.yt_url_cmp.match(url)
@@ -22,4 +22,5 @@ class loadPlaylist():
                         if self.voiceplayer.yt_url_cmp.match(url):
                             self.app.logger.info(f"Loaded: {url}")
                             self.voiceplayer.queue.put(url)
-        self.voiceplayer.play()
+        if autoplay:
+            self.voiceplayer.play()

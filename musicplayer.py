@@ -6,17 +6,20 @@ import asyncio
 import discord
 import requests
 import threading
+import playlist
 from queue import Queue
-
+import persistence as db
 class musicPlayer():
     def __init__(self, server, app, volume=100):
         self.app = app
+        self.stop_player = False
         self.player = None
         self.thread = None
         self.skipcount = 0
         self.queue = Queue()
         self.skippers = list()
         self.server_id = server
+        self.__playlist_lock = threading.Lock()
         self.__lock = threading.Lock()
         self.tts_cmp = regex.compile(r"^audio([A-f0-9])+\.mp3")
         self.default_volume = min(max(float(int(volume))/100, 0.1), 2.0)
@@ -34,6 +37,10 @@ class musicPlayer():
                         else:
                             if self.queue.qsize() > 0:
                                 try:
+                                    self.stop_player = False
+                                    if not self.__lock.locked():
+                                        self.__lock.acquire(timeout=2)
+                                        self.app.logger.info("Reaquired lock")
                                     self.app.logger.info(f"Starting voice player....")
                                     item = self.queue.get()
                                     self.app.logger.info(f"Got player object...")
@@ -57,21 +64,48 @@ class musicPlayer():
                                 except Exception as e:
                                     self.app.logger.error(f"Error in voice player: {e}")
                                     break
-                            else:
+                            elif self.stop_player:
                                 self.app.logger.info("Queue is empty")
                                 break
-                    except AttributeError:
-                        self.app.logger.error("Voice Player not found")
+                            else:
+                                if not self.__playlist_lock.locked():
+                                    self.__playlist_lock.acquire(timeout=2)
+                                    try:
+                                        self.app.logger.info("Trying to load playlist...")
+                                        await self.load_playlist()
+                                        self.app.logger.info("Playlist loaded successfully")
+                                    except Exception as e:
+                                        self.app.logger.error("Playlist error: {e}")
+                                    finally:
+                                        if self.__playlist_lock.locked():
+                                            self.__playlist_lock.release()
+                    except AttributeError as e:
+                        self.app.logger.error(f"Voice Player not found: {e}")
                         break
                     except Exception as e:
                         self.app.logger.error(f"Voice Player error: {e}")
                         break
-                else:
+                elif not self.app.musicClient.voice_client(server):
                     self.app.logger.info("VoiceClient not found")
                     break
         if self.__lock.locked():
             self.__lock.release()
-            self.app.logger.info("Released Lock")
+            self.app.logger.info("Released player Lock")
+        if self.__playlist_lock.locked():
+            self.__playlist_lock.release()
+            self.app.logger.info("Released playlist lock")
+        self.stop_player = True
+    async def load_playlist(self):
+        app = self.app
+        try:
+            server = db.Servers.get(db.Servers.server == self.server_id)
+            channel = app.client.get_channel(str(server.channel))
+            await app.musicClient.voice_connect(channel)
+            playlist_queue = db.Playlists.select().where(db.Playlists.playlist == server.playlist)
+            selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
+            await selectplaylist.load_playlist()
+        except Exception as e:
+            app.logger.error(f"Playlist error: {e}")
     async def encode_audio(self, item, server):
         self.app.logger.info("Processing audio...")
         try:
@@ -157,7 +191,7 @@ class musicClient():
         self.app = app
     def voice_client(self, server):
         try:
-            return self.voice_clients[server.id]
+            return self.app.client.voice_client_in(server)
         except KeyError:
             return None
     async def voice_connect(self, channel):
