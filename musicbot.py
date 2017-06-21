@@ -149,8 +149,6 @@ def main():
 @app.client.event
 async def on_ready():
     try:
-#        app.app_lock.acquire()
-#        my_db.connect()
         app.logger.info(f"{app.client.user.name} is online")
         app.logger.info(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
         await app.admin_pm(f"Shard ID: {app.client.shard_id} Shard Count: {app.client.shard_count}")
@@ -164,11 +162,8 @@ async def on_ready():
                 app.voiceplayer(channel.server.id).play()
             except Exception as e:
                 app.logger.error(f"Connecting error: {e}")
-#        my_db.close()
     except Exception as e:
         app.logger.error(e)
-   # finally:
-   #     app.app_lock.release()
 @app.client.event
 async def on_message(message):
     recmp = regex.compile(r"^\{}[A-z0-9]+.*".format(app.config.prefix))
@@ -256,12 +251,10 @@ async def on_server_join(server):
 async def on_server_leave(server):
     if not app.app_lock.locked():
         try:
-            my_db.connect()
             await app.admin_pm(f"Left: {server.name}")
             try:
                 Servers.delete().where(Servers.server == server.id)
             except: pass
-            my_db.close()
         except Exception as e:
             app.logger.error(e)
 
