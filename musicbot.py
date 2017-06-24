@@ -160,6 +160,7 @@ async def on_ready():
                 selectplaylist = playlist.loadPlaylist(app, app.voiceplayer(channel.server.id), playlist_queue)
                 await selectplaylist.load_playlist()
                 app.voiceplayer(channel.server.id).play()
+            except AttributeError: pass
             except Exception as e:
                 app.logger.error(f"Connecting error: {e}")
     except Exception as e:
