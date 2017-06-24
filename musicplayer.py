@@ -32,7 +32,7 @@ class musicPlayer():
                 await asyncio.sleep(2)
                 if self.app.musicClient.voice_client(server):
                     try:
-                        if self.player and not self.player.is_done():
+                        if (self.player) and not self.player.is_done():
                             pass
                         else:
                             if self.queue.qsize() > 0:
@@ -95,6 +95,8 @@ class musicPlayer():
             self.__playlist_lock.release()
             self.app.logger.info("Released playlist lock")
         self.stop_player = True
+        self.player = None
+        self.app.logger.info("VoicePlayer idle")
     async def load_playlist(self):
         app = self.app
         try:
