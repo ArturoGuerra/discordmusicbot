@@ -110,23 +110,39 @@ class musicPlayer():
             app.logger.error(f"Playlist error: {e}")
     async def encode_audio(self, item, server):
         self.app.logger.info("Processing audio...")
+        ytdl_format_options = {
+            'format': 'bestaudio/best',
+            'extractaudio': True,
+            'audioformat': 'mp3',
+            'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+            'restrictfilenames': True,
+            'noplaylist': True,
+            'nocheckcertificate': True,
+            'ignoreerrors': False,
+            'logtostderr': True,
+            'quiet': False,
+            'no_warnings': True,
+            'default_search': 'auto',
+            'source_address': '0.0.0.0'
+        }
+        ffmpeg_options = "-vn -b:a 128k"
         try:
             if self.tts_cmp.match(item):
                 self.app.logger.info("MP3 file detected")
-                player = self.app.musicClient.voice_client(server).create_ffmpeg_player(item)
+                player = self.app.musicClient.voice_client(server).create_ffmpeg_player(item, options=ffmpeg_options)
             elif self.yt_url_cmp.match(item):
                 self.app.logger.info("Youtube url detected")
-                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item, ytdl_options=ytdl_format_options, options=ffmpeg_options)
             elif self.yt_search_cmp.match(item):
                 self.app.logger.info("Search item detected")
-                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item)
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(item, ytdl_options=ytdl_format_options, options=ffmpeg_options)
             else:
                 self.app.logger.info("None of the above detected")
-                player = await self.app.musicClient.voice_client(server).create_ytdl_player(f"ytsearch:{item}")
+                player = await self.app.musicClient.voice_client(server).create_ytdl_player(f"ytsearch:{item}",  ytdl_options=ytdl_format_options, options=ffmpeg_options)
             return player
         except Exception as e:
             self.app.logger.error(e)
-            return e
+            return None
     async def playlistparser(self, url):
         match = self.yt_url_cmp.match(url)
         if match.group(2):
