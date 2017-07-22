@@ -57,6 +57,7 @@ class musicPlayer():
                                         os.remove(item)
                                         self.app.logger.info("MP3 file removed")
                                     self.app.logger.info("Stopping voice player...")
+                                    self.player = None
                                     self.queue.task_done()
                                 except (AttributeError, KeyError, IndexError):
                                     self.app.logger.error("Player not found")
@@ -77,6 +78,7 @@ class musicPlayer():
                                     except Exception as e:
                                         self.app.logger.error("Playlist error: {e}")
                                     finally:
+                                        self.stop_player = True
                                         if self.__playlist_lock.locked():
                                             self.__playlist_lock.release()
                     except AttributeError as e:
