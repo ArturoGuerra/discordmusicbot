@@ -4,16 +4,15 @@ import getpass
 
 #Creates bot config file
 class ConfigGenerator():
-    def __init__(self, app):
-        self.app = app
+    def __init__(self):
         self.__config = dict()
-        with open("./config/config.sample.json", 'r') as f:
+        with open("./config/sample.config.json", 'r') as f:
             self.__sample_config = json.load(f)
     def bot_setup(self):
         special = ['token']
         for key in self.__sample_config:
             if key in special:
-                special_key = getpass.getpass(prompt=f"{key}: ")
+                special_key = getpass.getpass(f"{key}: ")
                 self.__config[key]  = special_key
             elif isinstance(self.__sample_config[key], list):
                 self.__config[key] = list()
@@ -32,20 +31,16 @@ class Config():
     def __init__(self, app):
         self.app = app
         self.__config = dict()
-        self.correction_db = 1
-        self.app.app_lock.acquire()
         try:
             with open('./config/config.json', 'r') as f:
                 self.__config = json.load(f)
         except FileNotFoundError as e:
             if not self.app.args.setup and not self.app.args.dry_run:
                 self.app.logger.info("Config file not found, Creating...")
-                self.__config = ConfigGenerator(self.app).bot_setup()
+                self.__config = ConfigGenerator().bot_setup()
                 self.app.logger.info("Config file created successfully")
             else:
                  self.app.logger.error(e)
-        finally:
-            self.app.app_lock.release()
         for attr in self.__config:
             setattr(self.__class__, attr, self.__config[attr])
 

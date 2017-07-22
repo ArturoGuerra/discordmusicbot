@@ -5,5 +5,5 @@
 "dbuser": "Database User",
 "dbpass": "Database Password",
 "dbhost": "Database Host",
-"owners": ["Owner IDs"],
+"owners": ["Owner IDs"]
 }

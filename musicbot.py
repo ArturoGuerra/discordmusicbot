@@ -135,7 +135,7 @@ class MusicApplication():
 app = MusicApplication()
 def main():
     if app.args.setup:
-        config.ConfigGenerator(app).bot_setup()
+        config.ConfigGenerator().bot_setup()
         sys.exit()
     if app.args.dry_run:
         app.logger.info("Bot Dry Run")
