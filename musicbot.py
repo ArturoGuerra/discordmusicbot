@@ -36,13 +36,8 @@ class MusicApplication():
         self.parser.add_argument("--shard-id", help="Instance shard ID", type=int, nargs='?')
         self.parser.add_argument("--shard-count", help="Total number of shards", type=int, nargs='?')
         self.args = self.parser.parse_args()
-        if (isinstance(self.args.shard_count, int)) and isinstance(self.args.shard_id, int):
-            self.logger.info(f"Sharding: Shards {self.args.shard_count} Shard ID: {self.args.shard_id}")
-            self.client = discord.Client(loop=self.loop, shard_id=self.args.shard_id, shard_count=self.args.shard_count)
-        else:
-            self.logger.warning("No shards found")
-            self.client = discord.Client(loop=self.loop)
-
+        self.logger.info(f"Sharding: Shard ID: {self.args.shard_id} Shard Count: {self.args.shard_count}")
+        self.client = discord.Client(loop=self.loop, max_messages=10000, shard_id=self.args.shard_id, shard_count=self.args.shard_count)
         self.musicClient = musicplayer.musicClient(self)
         self.app_lock = threading.Lock()
         self.config = config.Config(self)
